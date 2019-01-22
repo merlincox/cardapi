@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/utils"
+	"github.com/merlincox/cardapi/utils"
 )
 
 func TestApiErrorBody(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/models"
+	"github.com/merlincox/cardapi/models"
 )
 
 func (front Front) statusHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {

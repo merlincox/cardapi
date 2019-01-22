@@ -9,8 +9,8 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/models"
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/utils"
+	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/utils"
 )
 
 var testFront = NewFront(models.Status{

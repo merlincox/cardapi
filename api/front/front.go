@@ -12,8 +12,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/utils"
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/models"
+	"github.com/merlincox/cardapi/utils"
+	"github.com/merlincox/cardapi/models"
 )
 
 type Front struct {

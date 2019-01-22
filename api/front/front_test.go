@@ -7,7 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/merlincox/aws-api-gateway-deploy/pkg/models"
+	"github.com/merlincox/cardapi/models"
 )
 
 func makeFront() Front {
