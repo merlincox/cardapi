@@ -1,0 +1,298 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: Sample AWS Gateway
+
+Parameters:
+  Platform:
+    Type: String
+    Description: Platform should be test, stage or live
+  Release:
+    Type: String
+    Description: Return value from git describe --tags
+  CertificateArn:
+    Type: String
+    Description: Arn for the SSL certifcate for the domain
+  Branch:
+    Type: String
+    Description: Git branch
+  Commit:
+    Type: String
+    Description: Git commit shortened to 16 characters
+  HostedZone:
+    Type: String
+    Description: Hosted zone ID for the domain
+  ApiLambdaNameBase:
+    Type: String
+    Default: ApiLambda
+    Description: The API Lambda Function Base Name
+  CustomDomain:
+    Type: String
+    Description: Domain mapped to API
+
+Resources:
+
+  ApiLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${ApiLambdaNameBase}-${Platform}
+      Timeout: 10
+      Handler: bin/api
+      Runtime: go1.x
+      Environment:
+        Variables:
+          RELEASE: !Ref Release
+          COMMIT: !Ref Commit
+          PLATFORM: !Ref Platform
+          REGION: !Ref "AWS::Region"
+          BRANCH: !Ref Branch
+      Role: !GetAtt ApiLambdaFunctionIAMRole.Arn
+      Events:
+        AnyRequest:
+          Type: Api
+          Properties:
+            Path: /
+            Method: ANY
+            RestApiId:
+              Ref: SampleAPI
+
+  SampleAPILambdaPermission:
+    DependsOn: ApiLambdaFunction
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${SampleAPI}/*"
+      FunctionName: !GetAtt ApiLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+
+  ApiLambdaFunctionIAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Action:
+          - "sts:AssumeRole"
+          Principal:
+            Service:
+            - "lambda.amazonaws.com"
+      Policies: # Inline Policies
+      - PolicyName: "CW-Logs"
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: "Allow"
+            Action:
+            - "logs:*"
+            Resource: "*"
+
+  SampleMapping:
+    Type: "AWS::ApiGateway::BasePathMapping"
+    DependsOn: SampleAPIStage
+    Properties:
+      DomainName: !Ref CustomDomain
+      RestApiId:  !Ref SampleAPI
+      Stage: !Ref Platform
+
+  ApiCustomDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      CertificateArn: !Ref CertificateArn
+      DomainName: !Ref CustomDomain
+
+  ApiRecordSet:
+    Type: AWS::Route53::RecordSet
+    DependsOn: ApiCustomDomainName
+    Properties:
+      AliasTarget:
+        DNSName:
+          Fn::GetAtt:
+          - ApiCustomDomainName
+          - DistributionDomainName
+        HostedZoneId: Z2FDTNDATAQYW2
+      Type: A
+      Name: !Ref CustomDomain
+      HostedZoneId: !Ref HostedZone
+
+  SampleAPI:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: !Sub ${Platform}
+      CacheClusterEnabled: true
+      CacheClusterSize: "0.5"
+      MethodSettings:
+      - ResourcePath:  "/*"
+        HttpMethod: "*"
+        CacheTtlInSeconds: 60
+        CachingEnabled: true
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          version: !Sub ${Platform}
+          title:  !Sub Sample-API-${Platform}
+          description: Sample API
+        schemes:
+        - "https"
+        x-amazon-apigateway-gateway-responses:
+          MISSING_AUTHENTICATION_TOKEN:
+            statusCode: 400
+            responseParameters:
+              gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+            responseTemplates:
+              application/json: |-
+                {
+                  "message": "No such route as $context.httpMethod$context.path",
+                  "code": 400
+                }
+        paths:
+          /status:
+            get:
+              produces:
+              - "application/json"
+              responses:
+                '200':
+                  description: "200 response"
+                  schema:
+                    $ref: "#/definitions/Status"
+                  headers:
+                    Cache-Control:
+                      type: "string"
+                    Access-Control-Allow-Origin:
+                      type: "string"
+              x-amazon-apigateway-integration:
+                uri:
+                  !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                responses:
+                  default:
+                    statusCode: "200"
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Origin: "'*'"
+                passthroughBehavior: "when_no_match"
+                httpMethod: "POST"
+                contentHandling: "CONVERT_TO_TEXT"
+                type: "aws_proxy"
+          /calc/{op}:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "op"
+                 in: "path"
+                 required: true
+                 type: "string"
+               - name: "val1"
+                 in: "query"
+                 required: true
+                 type: "string"
+               - name: "val2"
+                 in: "query"
+                 required: true
+                 type: "string"
+               - name: "Accept-Language"
+                 in: "header"
+                 required: false
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CalculationResult"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.path.op"
+                 - "method.request.querystring.val1"
+                 - "method.request.querystring.val2"
+                 - "method.request.header.Accept-Language"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+        definitions:
+          Empty:
+            type: "object"
+            title: "Empty Schema"
+          Status:
+            type: "object"
+            required:
+            - "platform"
+            - "branch"
+            - "release"
+            - "commit"
+            - "timestamp"
+            properties:
+              platform:
+                type: "string"
+              branch:
+                type: "string"
+              release:
+                type: "string"
+              commit:
+                type: "string"
+              timestamp:
+                type: "string"
+            description: "API status information"
+          CalculationResult:
+            type: "object"
+            required:
+            - "op"
+            - "val1"
+            - "val2"
+            - "locale"
+            - "result"
+            properties:
+              op:
+                type: "string"
+              val1:
+                type: "number"
+              val2:
+                type: "number"
+              result:
+                type: "string"
+              locale:
+                type: "string"
+            description: "Calculation Result"
