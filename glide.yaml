@@ -19,3 +19,5 @@ import:
   version: v0.3.0
   subpackages:
   - message
+- package: github.com/go-sql-driver/mysql
+  version: ^1.4.1
