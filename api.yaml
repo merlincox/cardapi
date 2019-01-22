@@ -296,3 +296,54 @@ Resources:
               locale:
                 type: "string"
             description: "Calculation Result"
+          Customer:
+            type: "object"
+            required:
+            - "id"
+            - "fullname"
+            properties:
+              id:
+                type: "number"
+              fullname:
+                type: "string"
+            description: "Customer"
+          Vendor:
+            type: "object"
+            required:
+            - "id"
+            - "fullname"
+            properties:
+              id:
+                type: "number"
+              fullname:
+                type: "string"
+            description: "Vendor"
+          Card:
+            type: "object"
+            required:
+            - "id"
+            - "balance"
+            - "available"
+            properties:
+              id:
+                type: "number"
+              balance:
+                type: "number"
+              available:
+                type: "number"
+            description: "Card"
+          Movement:
+            type: "object"
+            required:
+            - "id"
+            - "type"
+            - "amount"
+            - "description"
+            properties:
+              id:
+                type: "number"
+              type:
+                type: "string"
+              amountcd:
+                type: "number"
+            description: "Card"
