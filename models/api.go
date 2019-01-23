@@ -35,3 +35,11 @@ type Vendor struct {
 	Fullname string `json:"fullname"`
 	Id int `json:"id"`
 }
+
+type Card struct {
+
+	Id int `json:"id"`
+	Available int `json:"available"`
+	Balance int `json:"balance"`
+	CustomerId int `json:"customeriId"`
+}

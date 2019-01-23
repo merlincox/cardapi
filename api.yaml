@@ -322,10 +322,13 @@ Resources:
             type: "object"
             required:
             - "id"
+            - "customerId"
             - "balance"
             - "available"
             properties:
               id:
+                type: "number"
+              customerId:
                 type: "number"
               balance:
                 type: "number"
@@ -339,11 +342,14 @@ Resources:
             - "type"
             - "amount"
             - "description"
+            - "movementDate"
             properties:
               id:
                 type: "number"
               type:
                 type: "string"
-              amountcd:
+              amount:
                 type: "number"
-            description: "Card"
+              movementDate:
+                type: "string"
+            description: "Money movement"
