@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS cards (
 )
   ENGINE = INNODB;
 
-
 ALTER TABLE cards
   AUTO_INCREMENT = 1001;
 
@@ -79,3 +78,9 @@ CREATE TABLE IF NOT EXISTS authorisations (
 
 ALTER TABLE authorisations
   AUTO_INCREMENT = 1001;
+
+INSERT INTO customers (fullname)
+VALUES ('John Smith');
+
+INSERT INTO vendors (fullname)
+VALUES('Coffee Shop 1'),('Supermarket 1'),('Pub 1');
