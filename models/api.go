@@ -23,3 +23,15 @@ type Status struct {
 	Release   string `json:"release"`
 	Timestamp string `json:"timestamp"`
 }
+
+type Customer struct {
+
+	Fullname string `json:"fullname"`
+	Id int `json:"id"`
+}
+
+type Vendor struct {
+
+	Fullname string `json:"fullname"`
+	Id int `json:"id"`
+}
