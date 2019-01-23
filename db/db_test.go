@@ -2,63 +2,100 @@ package db
 
 import (
 	"testing"
+	"database/sql"
 
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
+
 	"github.com/merlincox/cardapi/utils"
-	"database/sql"
 )
 
 func testWrapper(t *testing.T, callback func(*testing.T, *sql.DB, sqlmock.Sqlmock, Dbi)) {
 
-	mockDb, mock, err := sqlmock.New()
+	mockDb, expecter, err := sqlmock.New()
 
 	if err != nil {
 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
 	}
-	defer mockDb.Close()
 
 	dbi, _ := NewDbi(mockDb)
 
-	callback(t, mockDb, mock, dbi)
+	callback(t, mockDb, expecter, dbi)
 
-	if err := mock.ExpectationsWereMet(); err != nil {
+	if err := expecter.ExpectationsWereMet(); err != nil {
 		t.Errorf("There were unfulfilled expectations: %s", err)
 	}
 }
 
 func TestGetVendors(t *testing.T) {
-	testWrapper(t, func(t *testing.T, mockDb *sql.DB, mock sqlmock.Sqlmock, dbi Dbi) {
+	testWrapper(t, func(t *testing.T, mockDb *sql.DB, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		rows := sqlmock.NewRows([]string{"id", "fullname"}).
+		expected := sqlmock.NewRows([]string{"id", "fullname"}).
 			AddRow(int64(1001), "a shop").
 			AddRow(int64(2002), "a pub")
 
-		mock.ExpectPrepare("SELECT id, fullname FROM vendors").ExpectQuery().WillReturnRows(rows)
+		expecter.ExpectPrepare(QUERY_GET_VENDORS).ExpectQuery().WillReturnRows(expected)
 
 		vs, apiErr := dbi.GetVendors()
 
-		utils.AssertNoError(t, "Calling GetVendor", apiErr)
-		utils.AssertEquals(t, "Size of GetVendor result", 2, len(vs))
-		utils.AssertEquals(t, "Fullname for GetVendor result[0]", "a shop", vs[0].Fullname)
-		utils.AssertEquals(t, "Id for GetVendor result[0]", 1001, vs[0].Id)
+		utils.AssertNoError(t, "Calling GetVendors", apiErr)
+		utils.AssertEquals(t, "Size of GetVendors result", 2, len(vs))
+		utils.AssertEquals(t, "Fullname for GetVendors result[0]", "a shop", vs[0].Fullname)
+		utils.AssertEquals(t, "Id for GetVendors result[0]", 1001, vs[0].Id)
 	})
 }
 
 func TestGetCustomers(t *testing.T) {
-	testWrapper(t, func(t *testing.T, mockDb *sql.DB, mock sqlmock.Sqlmock, dbi Dbi) {
+	testWrapper(t, func(t *testing.T, mockDb *sql.DB, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		rows := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "a shop").
-			AddRow(int64(2002), "a pub")
+		//mockDb, expecter, err := sqlmock.New()
+		//
+		//if err != nil {
+		//	t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		//}
 
-		mock.ExpectPrepare("SELECT id, fullname FROM customers").ExpectQuery().WillReturnRows(rows)
+		expected := sqlmock.NewRows([]string{"id", "fullname"}).
+			AddRow(int64(1001), "Fred Bloggs").
+			AddRow(int64(2002), "Jane Doe")
+
+		expecter.ExpectPrepare(QUERY_GET_CUSTOMERS).ExpectQuery().WillReturnRows(expected)
 
 		vs, apiErr := dbi.GetCustomers()
 
-		utils.AssertNoError(t, "Calling GetCustomer", apiErr)
-		utils.AssertEquals(t, "Size of GetCustomer result", 2, len(vs))
-		utils.AssertEquals(t, "Fullname for GetCustomer result[0]", "a shop", vs[0].Fullname)
-		utils.AssertEquals(t, "Id for GetCustomer result[0]", 1001, vs[0].Id)
+		utils.AssertNoError(t, "Calling GetCustomers", apiErr)
+		utils.AssertEquals(t, "Size of GetCustomers result", 2, len(vs))
+		utils.AssertEquals(t, "Fullname for GetCustomers result[0]", "Fred Bloggs", vs[0].Fullname)
+		utils.AssertEquals(t, "Id for GetCustomers result[0]", 1001, vs[0].Id)
 	})
 }
 
+func TestAddVendor(t *testing.T) {
+	testWrapper(t, func(t *testing.T, mockDb *sql.DB, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewResult(1001, 1)
+
+		// Not sure why square brackets are needed here..
+		expecter.ExpectPrepare("[" + QUERY_ADD_VENDOR + "]").ExpectExec().WillReturnResult(expected)
+
+		v, apiErr := dbi.AddVendor("coffee shop")
+
+		utils.AssertNoError(t, "Calling AddVendor", apiErr)
+		utils.AssertEquals(t, "Fullname for AddVendor result", "coffee shop", v.Fullname)
+		utils.AssertEquals(t, "Id for AddVendor result", 1001, v.Id)
+	})
+}
+
+func TestAddCustomer(t *testing.T) {
+	testWrapper(t, func(t *testing.T, mockDb *sql.DB, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewResult(1001, 1)
+
+		// Not sure why square brackets are needed here..
+		expecter.ExpectPrepare("[" + QUERY_ADD_CUSTOMER + "]").ExpectExec().WillReturnResult(expected)
+
+		v, apiErr := dbi.AddCustomer("coffee shop")
+
+		utils.AssertNoError(t, "Calling AddCustomer", apiErr)
+		utils.AssertEquals(t, "Fullname for AddCustomer result", "coffee shop", v.Fullname)
+		utils.AssertEquals(t, "Id for AddCustomer result", 1001, v.Id)
+	})
+}

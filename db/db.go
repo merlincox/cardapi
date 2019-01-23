@@ -9,11 +9,25 @@ import (
 	"log"
 )
 
+const(
+	DEFAULT_DATASOURCE_NAME = "merlincox:merlincox@tcp(www.db4free.net:3306)/merlincox"
+	
+	QUERY_GET_CUSTOMERS = "SELECT id, fullname FROM customers"
+	QUERY_GET_CUSTOMER = "SELECT id, fullname FROM customers WHERE ID = ?"
+	QUERY_GET_VENDORS = "SELECT id, fullname FROM vendors"
+	QUERY_GET_VENDOR = "SELECT id, fullname FROM vendors WHERE ID = ?"
+
+	QUERY_ADD_VENDOR = "INSERT INTO vendors (fullname) VALUES (?)"
+	QUERY_ADD_CUSTOMER = "INSERT INTO customers (fullname) VALUES (?)"
+)
+
+
 type Dbi interface {
-	//AddCustomer(fullname string) (models.Customer, models.ApiError)
+	
+	AddCustomer(fullname string) (models.Customer, models.ApiError)
 	//GetCustomer(id int) (models.Customer, models.ApiError)
 	GetCustomers() ([]models.Customer, models.ApiError)
-	//AddVendor(fullname string) (models.Vendor, models.ApiError)
+	AddVendor(fullname string) (models.Vendor, models.ApiError)
 	//GetVendor(id int) (models.Vendor, models.ApiError)
 	GetVendors() ([]models.Vendor, models.ApiError)
 
@@ -35,7 +49,7 @@ func NewDbi(injected *sql.DB) (Dbi, models.ApiError) {
 
 		if injected == nil {
 
-			s, err := sql.Open("mysql", "merlincox:merlincox@tcp(www.db4free.net:3306)/merlincox")
+			s, err := sql.Open("mysql", DEFAULT_DATASOURCE_NAME)
 
 			if err != nil {
 				return nil, models.ErrorWrap(err)
@@ -71,10 +85,13 @@ func (d *dbGate) Close() {
 		stmt.Close()
 	}
 
+
 	if dbx != nil {
 		log.Printf("Closing connection\n")
 		dbx.Close()
 	}
+
+	dbx = nil
 }
 
 func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
@@ -85,11 +102,11 @@ func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
 		err error
 	)
 
-	qry := "SELECT id, fullname FROM vendors"
+	qry := QUERY_GET_VENDORS
 
-	_, already := stmts[qry]
+	_, prepared := stmts[qry]
 
-	if !already {
+	if !prepared {
 
 		stmts[qry], err = dbx.Prepare(qry)
 
@@ -130,11 +147,11 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 		err error
 	)
 
-	qry := "SELECT id, fullname FROM customers"
+	qry := QUERY_GET_CUSTOMERS
 
-	_, already := stmts[qry]
+	_, prepared := stmts[qry]
 
-	if !already {
+	if !prepared {
 
 		stmts[qry], err = dbx.Prepare(qry)
 
@@ -165,4 +182,84 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 	}
 
 	return cs, nil
+}
+
+func (d *dbGate) AddVendor(fullname string) (models.Vendor, models.ApiError) {
+
+	var (
+		v   models.Vendor
+		err error
+	)
+
+	qry := QUERY_ADD_VENDOR
+
+	_, prepared := stmts[qry]
+
+	if !prepared {
+
+		stmts[qry], err = dbx.Prepare(qry)
+
+		if err != nil {
+			return v, models.ErrorWrap(err)
+		}
+	}
+
+	res, err := stmts[qry].Exec(fullname)
+
+	if err != nil {
+		return v, models.ErrorWrap(err)
+	}
+
+	id64, err := res.LastInsertId()
+
+	if err != nil {
+		return v, models.ErrorWrap(err)
+	}
+
+	v = models.Vendor{
+		Fullname: fullname,
+		Id:       int(id64),
+	}
+
+	return v, nil
+}
+
+func (d *dbGate) AddCustomer(fullname string) (models.Customer, models.ApiError) {
+
+	var (
+		v   models.Customer
+		err error
+	)
+
+	qry := QUERY_ADD_CUSTOMER
+
+	_, prepared := stmts[qry]
+
+	if !prepared {
+
+		stmts[qry], err = dbx.Prepare(qry)
+
+		if err != nil {
+			return v, models.ErrorWrap(err)
+		}
+	}
+
+	res, err := stmts[qry].Exec(fullname)
+
+	if err != nil {
+		return v, models.ErrorWrap(err)
+	}
+
+	id64, err := res.LastInsertId()
+
+	if err != nil {
+		return v, models.ErrorWrap(err)
+	}
+
+	v = models.Customer{
+		Fullname: fullname,
+		Id:       int(id64),
+	}
+
+	return v, nil
 }
