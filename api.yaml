@@ -325,6 +325,7 @@ Resources:
             - "customerId"
             - "balance"
             - "available"
+            - "ts"
             properties:
               id:
                 type: "number"
@@ -334,22 +335,51 @@ Resources:
                 type: "number"
               available:
                 type: "number"
+              ts:
+                type: "string"
             description: "Card"
           Movement:
             type: "object"
             required:
             - "id"
-            - "type"
+            - "cardId"
+            - "movementType"
             - "amount"
             - "description"
-            - "movementDate"
+            - "ts"
             properties:
               id:
                 type: "number"
-              type:
+              cardId:
+                type: "number"
+              movemenType:
                 type: "string"
               amount:
                 type: "number"
-              movementDate:
+              ts:
+                type: "string"
+            description: "Money movement"
+          Authorisation:
+            type: "object"
+            required:
+            - "id"
+            - "cardId"
+            - "vendorId"
+            - "amount"
+            - "captured"
+            - "description"
+            - "ts"
+            properties:
+              id:
+                type: "number"
+              cardId:
+                type: "number"
+              vendorId:
+                type: "number"
+              amount:
+                type: "number"
+              captured:
+                type: "number"
+              ts:
                 type: "string"
             description: "Money movement"
