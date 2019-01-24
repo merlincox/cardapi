@@ -116,6 +116,36 @@ func TestGetVendorNotFound(t *testing.T) {
 	})
 }
 
+func TestGetCard(t *testing.T) {
+	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewRows([]string{"id", "balance", "available"}).
+			AddRow(int64(1001), 12676, 12089)
+
+		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WillReturnRows(expected)
+
+		v, apiErr := dbi.GetCard(1001)
+
+		utils.AssertNoError(t, "Calling GetCard", apiErr)
+		utils.AssertEquals(t, "Balance for GetCard result", 12676, v.Balance)
+		utils.AssertEquals(t, "Available for GetCard result", 12089, v.Available)
+	})
+}
+
+func TestGetCardNotFound(t *testing.T) {
+	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewRows([]string{"id", "balance", "available"})
+
+		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WillReturnRows(expected)
+
+		_, apiErr := dbi.GetCard(1001)
+
+		utils.AssertEquals(t, "Return status for calling GetCard with a bad id", 404, apiErr.StatusCode())
+		utils.AssertEquals(t, "Return message for calling GetCard with bad id 1001", fmt.Sprintf(MESSAGE_GET_CARD_BAD_ID, 1001), apiErr.Error())
+	})
+}
+
 func TestAddVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
