@@ -178,7 +178,7 @@ func TestAddCustomer(t *testing.T) {
 	})
 }
 
-func TestAddCard(t *testing.T) {
+func TestAddCardOK(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
 		expected := sqlmock.NewResult(1001, 1)
@@ -206,5 +206,43 @@ func TestAddCardNotFound(t *testing.T) {
 
 		utils.AssertEquals(t, "Return status for calling AddCard with a bad customerId", 400, apiErr.StatusCode())
 		utils.AssertEquals(t, "Return message for calling AddCard with bad customerId 1099", fmt.Sprintf(MESSAGE_ADD_CARD_BAD_ID, 1099), apiErr.Error())
+	})
+}
+
+func TestAuthoriseOK(t *testing.T) {
+	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewRows([]string{"id", "fullname"}).
+			AddRow(int64(1001), "Coffee Shop")
+
+		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WillReturnRows(expected)
+
+		expected = sqlmock.NewRows([]string{"id", "balance", "available"}).
+			AddRow(int64(100001), 12676, 12089)
+
+		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WillReturnRows(expected)
+
+		expecter.ExpectBegin()
+
+		expectedR := sqlmock.NewResult(0, 1)
+
+		// Not sure why square brackets are needed here..
+		expecter.ExpectPrepare("[" + QUERY_AUTHORISE + "]").ExpectExec().WithArgs(100001, 210).WillReturnResult(expectedR)
+
+		expectedR = sqlmock.NewResult(1009, 1)
+
+		// Not sure why square brackets are needed here..
+		expecter.ExpectPrepare("[" + QUERY_ADD_AUTHORISATION + "]").ExpectExec().WillReturnResult(expectedR)
+
+		expecter.ExpectCommit()
+
+		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
+
+		utils.AssertNoError(t, "Calling Authorise", apiErr)
+
+		utils.AssertEquals(t, "Authorisation id", 1009, aid)
+
+		//@TODO
+
 	})
 }
