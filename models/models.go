@@ -57,3 +57,46 @@ func ErrorWrap(err error) ApiError {
 		},
 	}
 }
+
+type Customer struct {
+
+	Fullname string `json:"fullname"`
+	Id int `json:"id"`
+}
+
+type Vendor struct {
+
+	Fullname string `json:"fullname"`
+	Id int `json:"id"`
+}
+
+type Card struct {
+
+	Id int `json:"id"`
+	Available int `json:"available"`
+	Balance int `json:"balance"`
+	CustomerId int `json:"customeriId"`
+	Ts string `json:"ts"`
+}
+
+type Authorisation struct {
+
+	Id int `json:"id"`
+	CardId int `json:"cardId"`
+	VendorId int `json:"vendorId"`
+	Amount int `json:"amount"`
+	Captured int `json:"captured"`
+	Description string `json:"description"`
+	Ts string `json:"ts"`
+}
+
+type Movement struct {
+
+	Id int `json:"id"`
+	CardId int `json:"cardId"`
+	MovementType string `json:"movementType"`
+	Amount int `json:"amount"`
+	Description string `json:"description"`
+	Ts string `json:"ts"`
+}
+
