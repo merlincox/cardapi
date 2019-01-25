@@ -11,6 +11,7 @@ import (
 
 	"github.com/merlincox/cardapi/api/front"
 	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/db"
 )
 
 const cacheTtlSeconds = 60
@@ -28,5 +29,8 @@ func main() {
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 	}
 
-	lambda.Start(front.NewFront(status, cacheTtlSeconds).Handler)
+	dbi, _ := db.NewDbi(nil)
+	//@TODO handler db error
+
+	lambda.Start(front.NewFront(dbi, status, cacheTtlSeconds).Handler)
 }

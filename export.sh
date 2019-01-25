@@ -21,7 +21,7 @@ fi
 platform=$1
 
 package=models
-package_dir=pkg/models
+package_dir=models
 export_dir=export
 
 export_json=${export_dir}/swagger_${platform}.json

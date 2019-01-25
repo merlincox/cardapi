@@ -11,6 +11,16 @@ type CalculationResult struct {
 	Val2   float64 `json:"val2"`
 }
 
+// CardResponse: Card Request
+type CardResponse struct {
+	Amount      int `json:"amount"`
+	CardId      int `json:"cardId"`
+	Description string  `json:"description"`
+	Id          int `json:"id"`
+	RequestType string  `json:"requestType"`
+	VendorId    int `json:"vendorId"`
+}
+
 // Empty: (No description)
 type Empty struct {
 }

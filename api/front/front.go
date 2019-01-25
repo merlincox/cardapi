@@ -14,9 +14,11 @@ import (
 
 	"github.com/merlincox/cardapi/utils"
 	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/db"
 )
 
 type Front struct {
+	dbi         db.Dbi
 	status      models.Status
 	router      func(route string) innerHandler
 	cacheMaxAge int
@@ -28,9 +30,10 @@ type innerHandler func(request events.APIGatewayProxyRequest) (interface{}, mode
 
 // NewFront Create a new Front object
 //
-func NewFront(status models.Status, cacheMaxAge int) Front {
+func NewFront(dbi         db.Dbi, status models.Status, cacheMaxAge int) Front {
 
 	f := Front{
+		dbi: dbi,
 		status: status,
 		cacheMaxAge: cacheMaxAge,
 	}
@@ -72,6 +75,9 @@ func (front *Front) getHandlerForRoute(route string) innerHandler {
 
 	case "GET/calc/{op}":
 		return front.calcHandler
+
+	case "POST/card-request":
+		return front.cardRequestHandler
 
 	}
 

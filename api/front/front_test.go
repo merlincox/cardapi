@@ -11,7 +11,7 @@ import (
 )
 
 func makeFront() Front {
-	return NewFront(models.Status{}, 123)
+	return NewFront(nil, models.Status{}, 123)
 }
 
 func TestUnknownRoute(t *testing.T) {

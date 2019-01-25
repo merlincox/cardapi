@@ -11,11 +11,57 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 
 	"github.com/merlincox/cardapi/models"
+	"encoding/json"
 )
 
 func (front Front) statusHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 
 	return front.status, nil
+}
+
+type cardRequestHandler func(request models.CardRequest) (interface{}, models.ApiError)
+
+func (front Front) cardRequestHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	cr := models.CardRequest{}
+
+	err := json.Unmarshal([]byte(request.Body), &cr)
+
+	if err != nil {
+		return nil, models.ErrorWrap(err)
+	}
+
+	var subHandler cardRequestHandler
+
+	switch cr.RequestType {
+
+	case "AUTHORISATION":
+		subHandler = front.authoriseHandler
+
+	default:
+		return nil, models.ConstructApiError(400, "Unsupported card request type: %v", cr.RequestType)
+
+	}
+
+	return subHandler(cr)
+}
+
+func (front Front) authoriseHandler(cr models.CardRequest) (interface{}, models.ApiError) {
+
+	id, err := front.dbi.Authorise(cr.CardId, cr.VendorId, cr.Amount, cr.Description)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return models.CardResponse{
+		Amount:      cr.Amount,
+		CardId:      cr.CardId,
+		Description: cr.Description,
+		Id:          id,
+		RequestType: cr.RequestType,
+		VendorId:    cr.VendorId,
+	}, nil
 }
 
 func (front Front) calcHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {

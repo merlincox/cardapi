@@ -369,7 +369,7 @@ Resources:
             - "fullname"
             properties:
               id:
-                type: "number"
+                type: "integer"
               fullname:
                 type: "string"
             description: "Customer"
@@ -380,7 +380,7 @@ Resources:
             - "fullname"
             properties:
               id:
-                type: "number"
+                type: "integer"
               fullname:
                 type: "string"
             description: "Vendor"
@@ -394,13 +394,13 @@ Resources:
             - "ts"
             properties:
               id:
-                type: "number"
+                type: "integer"
               customerId:
-                type: "number"
+                type: "integer"
               balance:
-                type: "number"
+                type: "integer"
               available:
-                type: "number"
+                type: "integer"
               ts:
                 type: "string"
             description: "Card"
@@ -415,13 +415,13 @@ Resources:
             - "ts"
             properties:
               id:
-                type: "number"
+                type: "integer"
               cardId:
-                type: "number"
+                type: "integer"
               movementType:
                 type: "string"
               amount:
-                type: "number"
+                type: "integer"
               description:
                 type: "string"
               ts:
@@ -440,17 +440,17 @@ Resources:
             - "ts"
             properties:
               id:
-                type: "number"
+                type: "integer"
               cardId:
-                type: "number"
+                type: "integer"
               vendorId:
-                type: "number"
+                type: "integer"
               amount:
-                type: "number"
+                type: "integer"
               captured:
-                type: "number"
+                type: "integer"
               refunded:
-                type: "number"
+                type: "integer"
               description:
                 type: "string"
               ts:
@@ -466,13 +466,13 @@ Resources:
             - "requestType"
             properties:
               cardId:
-                type: "number"
+                type: "integer"
               requestType:
                 type: "string"
               vendorId:
-                type: "number"
+                type: "integer"
               amount:
-                type: "number"
+                type: "integer"
               description:
                 type: "string"
             description: "Card Request"
@@ -487,15 +487,15 @@ Resources:
             - "requestType"
             properties:
               id:
-                type: "number"
+                type: "integer"
               cardId:
-                type: "number"
+                type: "integer"
               requestType:
                 type: "string"
               vendorId:
-                type: "number"
+                type: "integer"
               amount:
-                type: "number"
+                type: "integer"
               description:
                 type: "string"
-            description: "Card Request"
+            description: "Card Response"

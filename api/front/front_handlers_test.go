@@ -13,7 +13,7 @@ import (
 	"github.com/merlincox/cardapi/utils"
 )
 
-var testFront = NewFront(models.Status{
+var testFront = NewFront(nil, models.Status{
 	Branch:    "testing",
 	Platform:  "test",
 	Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
