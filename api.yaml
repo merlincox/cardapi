@@ -252,11 +252,11 @@ Resources:
                  requestTemplates:
                    application/json: "{\"statusCode\": 200}"
                  type: "mock"
-          /request:
+          /card-request:
              post:
                summary: Post a request
                requestBody:
-                 description: Optional description in *Markdown*
+                 description: A request
                  required: true
                  content:
                    application/json:
@@ -265,31 +265,13 @@ Resources:
                    application/x-www-form-urlencoded:
                      schema:
                        $ref: '#/definitions/CardRequest'
-
                produces:
                - "application/json"
-               parameters:
-               - name: "op"
-                 in: "path"
-                 required: true
-                 type: "string"
-               - name: "val1"
-                 in: "query"
-                 required: true
-                 type: "string"
-               - name: "val2"
-                 in: "query"
-                 required: true
-                 type: "string"
-               - name: "Accept-Language"
-                 in: "header"
-                 required: false
-                 type: "string"
                responses:
                  '200':
                    description: "200 response"
                    schema:
-                     $ref: "#/definitions/CalculationResult"
+                     $ref: "#/definitions/CardResponse"
                    headers:
                      Cache-Control:
                        type: "string"
@@ -305,11 +287,6 @@ Resources:
                        method.response.header.Access-Control-Allow-Origin: "'*'"
                  passthroughBehavior: "when_no_match"
                  httpMethod: "POST"
-                 cacheKeyParameters:
-                 - "method.request.path.op"
-                 - "method.request.querystring.val1"
-                 - "method.request.querystring.val2"
-                 - "method.request.header.Accept-Language"
                  contentHandling: "CONVERT_TO_TEXT"
                  type: "aws_proxy"
              options:
@@ -488,6 +465,29 @@ Resources:
             - "description"
             - "requestType"
             properties:
+              cardId:
+                type: "number"
+              requestType:
+                type: "string"
+              vendorId:
+                type: "number"
+              amount:
+                type: "number"
+              description:
+                type: "string"
+            description: "Card Request"
+          CardResponse:
+            type: "object"
+            required:
+            - "id"
+            - "cardId"
+            - "vendorId"
+            - "amount"
+            - "description"
+            - "requestType"
+            properties:
+              id:
+                type: "number"
               cardId:
                 type: "number"
               requestType:
