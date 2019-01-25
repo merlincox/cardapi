@@ -65,3 +65,12 @@ type Movement struct {
 	Description string `json:"description"`
 	Ts string `json:"ts"`
 }
+
+type CardRequest struct {
+
+	VendorId int `json:"vendorId"`
+	CardId int `json:"cardId"`
+	RequestType string `json:"requestType"`
+	Amount int `json:"amount"`
+	Description string `json:"description"`
+}

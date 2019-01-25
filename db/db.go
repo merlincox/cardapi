@@ -2,11 +2,9 @@ package db
 
 import (
 	"database/sql"
-
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/merlincox/cardapi/models"
-	"log"
 )
 
 const (
@@ -16,7 +14,8 @@ const (
 	QUERY_GET_CUSTOMER  = "SELECT id, fullname FROM customers WHERE id = ?"
 	QUERY_GET_VENDORS   = "SELECT id, fullname FROM vendors"
 	QUERY_GET_VENDOR    = "SELECT id, fullname FROM vendors WHERE id = ?"
-	QUERY_GET_CARD      = "SELECT id, balance, available FROM cards WHERE id = ?"
+	QUERY_GET_CARD      = "SELECT id, balance, available, ts FROM cards WHERE id = ?"
+	QUERY_GET_AUTHORISATION      = "SELECT id, amount, cardId, ts FROM authorisation WHERE id = ?"
 
 	QUERY_ADD_VENDOR   = "INSERT INTO vendors (fullname) VALUES (?)"
 	QUERY_ADD_CUSTOMER = "INSERT INTO customers (fullname) VALUES (?)"
@@ -27,10 +26,10 @@ const (
 	QUERY_ADD_AUTHORISATION = `INSERT INTO authorisations (card_id, vendor_id, amount, description) 
                                VALUES (?, ?, ?, ?)`
 
-	QUERY_TOPUP = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
+	QUERY_UPDATE_CARD = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
 
-	QUERY_ADD_MOVEMENT = `INSERT INTO movements (card_id, amount, description, movement_date) 
-                               VALUES (?, ?, ?, NOW())`
+	QUERY_ADD_MOVEMENT = `INSERT INTO movements (card_id, amount, description, movement_type) 
+                               VALUES (?, ?, ?, ?)`
 
 	ERROR_NOT_FOUND   = "sql: no rows in result set"
 	ERROR_FOREIGN_KEY = "Error 1216: Cannot add or update a child row: a foreign key constraint fails"
@@ -40,10 +39,14 @@ const (
 	MESSAGE_GET_CARD_BAD_ID     = "GetCard: no card with id: %v"
 	MESSAGE_ADD_CARD_BAD_ID     = "AddCard: no customer with id: %v"
 
-	MESSAGE_AUTHORISE_INVALID_AMOUNT         = "Authorise: amount must exceed 0"
-	MESSAGE_AUTHORISE_INVALID_VENDOR         = "Authorise: no vendor with id: %v"
-	MESSAGE_AUTHORISE_INVALID_CARD           = "Authorise: no card with id: %v"
+	MESSAGE_INVALID_AMOUNT         = "%v: invalid amount £%.2f"
+	MESSAGE_INVALID_VENDOR         = "%v: no vendor with id: %v"
+	MESSAGE_INVALID_CARD           = "%v: no card with id: %v"
+
 	MESSAGE_AUTHORISE_INSUFFICIENT_AVAILABLE = "Authorise: insufficient funds: £%.2f exceeds available £%.2f"
+	MESSAGE_AUTHORISE_INSUFFICIENT_AVAILABLE_FOR = "Authorise: insufficient funds for amount £%.2f"
+
+	MESSAGE_INVALID_ROW_UPDATE = "%v: invalid row update"
 )
 
 type Dbi interface {
@@ -60,7 +63,7 @@ type Dbi interface {
 
 	//Refund(authorisationId, amount int, description string) (int, models.ApiError)
 	//Capture(authorisationId, amount int) (int, models.ApiError)
-	//TopUp(cardId, amount int, description string) (int, models.ApiError)
+	TopUp(cardId, amount int, description string) (int, models.ApiError)
 	Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError)
 
 	Ping() models.ApiError
@@ -112,13 +115,13 @@ func (d *dbGate) Ping() models.ApiError {
 
 func (d *dbGate) Close() {
 
-	for qry, stmt := range stmts {
-		log.Printf("Closing prepared query '%v'\n", qry)
+	for _, stmt := range stmts {
+		//log.Printf("Closing prepared query '%v'\n", qry)
 		stmt.Close()
 	}
 
 	if dbx != nil {
-		log.Printf("Closing connection\n")
+		//log.Printf("Closing connection\n")
 		dbx.Close()
 	}
 
@@ -300,7 +303,7 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 		}
 	}
 
-	err = stmts[qry].QueryRow(id).Scan(&c.Id, &c.Balance, &c.Available)
+	err = stmts[qry].QueryRow(id).Scan(&c.Id, &c.Balance, &c.Available, &c.Ts)
 
 	if err != nil {
 		if err.Error() == ERROR_NOT_FOUND {
@@ -437,12 +440,8 @@ func (d *dbGate) AddCard(customerId int) (models.Card, models.ApiError) {
 
 func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError) {
 
-	var (
-		err error
-	)
-
 	if amount <= 0 {
-		return -1, models.ConstructApiError(400, MESSAGE_AUTHORISE_INVALID_AMOUNT, amount/100)
+		return -1, models.ConstructApiError(400, MESSAGE_INVALID_AMOUNT, "Authorise", float32(amount)/100)
 	}
 
 	_, apiErr := d.GetVendor(vendorId)
@@ -453,7 +452,7 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 			return -1, apiErr
 		}
 
-		return -1, models.ConstructApiError(400, MESSAGE_AUTHORISE_INVALID_VENDOR, vendorId)
+		return -1, models.ConstructApiError(400, MESSAGE_INVALID_VENDOR, "Authorise", vendorId)
 	}
 
 	c, apiErr := d.GetCard(cardId)
@@ -464,7 +463,7 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 			return -1, apiErr
 		}
 
-		return -1, models.ConstructApiError(400, MESSAGE_AUTHORISE_INVALID_CARD, cardId)
+		return -1, models.ConstructApiError(400, MESSAGE_INVALID_CARD, "Authorise", cardId)
 	}
 
 	if c.Available < amount {
@@ -496,6 +495,14 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 
 	if err != nil {
 		return -1, models.ErrorWrap(err)
+	}
+
+	//double check that exactly one row was updated
+
+	affected, err := res.RowsAffected()
+
+	if affected != int64(1) {
+		return -1, models.ConstructApiError(400, MESSAGE_AUTHORISE_INSUFFICIENT_AVAILABLE_FOR, float32(amount)/100)
 	}
 
 	qry = QUERY_ADD_AUTHORISATION
@@ -532,51 +539,176 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 	return int(id64), nil
 }
 
-//func (d *dbGate) TopUp(cardId, amount int, description string) (models.Movement, models.ApiError) {
-//
-//	var (
-//		m   models.Movement
-//		err error
-//	)
-//
-//	if amount <= 0 {
-//		return m, models.ConstructApiError(400, MESSAGE_TOPUP_INVALID_AMOUNT, amount)
-//	}
-//
-//	qry := QUERY_ADD_TOPUP
-//
-//	_, prepared := stmts[qry]
-//
-//	if !prepared {
-//
-//		stmts[qry], err = dbx.Prepare(qry)
-//
-//		if err != nil {
-//			return m, models.ErrorWrap(err)
-//		}
-//	}
-//
-//	res, err := stmts[qry].Exec(amount, description, cardId, amount)
-//
-//	if err != nil {
-//		if err.Error() == ERROR_FOREIGN_KEY {
-//			return m, models.ConstructApiError(400, MESSAGE_ADD_CARD_BAD_ID, cardId)
-//		}
-//		return m, models.ErrorWrap(err)
-//	}
-//
-//	id64, err := res.LastInsertId()
-//
-//	if err != nil {
-//		return m, models.ErrorWrap(err)
-//	}
-//
-//	m = models.Movement{
-//		CardId: cardId,
-//		MovementType: "Top-up",
-//		Amount: amount,
-//		Id:         int(id64),
-//	}
-//
-//	return m, nil
-//}
+func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiError) {
+
+	if amount <= 0 {
+		return -1, models.ConstructApiError(400, MESSAGE_INVALID_AMOUNT, "TopUp", float32(amount)/100)
+	}
+
+	_, apiErr := d.GetCard(cardId)
+
+	if apiErr != nil {
+
+		if apiErr.StatusCode() == 500 {
+			return -1, apiErr
+		}
+
+		return -1, models.ConstructApiError(400, MESSAGE_INVALID_CARD, "TopUp", cardId)
+	}
+
+	tx, err := dbx.Begin()
+
+	if err != nil {
+		return -1, models.ErrorWrap(err)
+	}
+
+	defer tx.Rollback()
+
+	qry := QUERY_UPDATE_CARD
+
+	_, prepared := stmts[qry]
+
+	if !prepared {
+
+		stmts[qry], err = dbx.Prepare(qry)
+
+		if err != nil {
+			return -1, models.ErrorWrap(err)
+		}
+	}
+
+	res, err := tx.Stmt(stmts[qry]).Exec(amount, amount, cardId)
+
+	if err != nil {
+		return -1, models.ErrorWrap(err)
+	}
+
+	//double check that exactly one row was updated
+
+	affected, err := res.RowsAffected()
+
+	if affected != int64(1) {
+		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "TopUp")
+	}
+
+	qry = QUERY_ADD_MOVEMENT
+
+	_, prepared = stmts[qry]
+
+	if !prepared {
+
+		stmts[qry], err = dbx.Prepare(qry)
+
+		if err != nil {
+			return -1, models.ErrorWrap(err)
+		}
+	}
+
+	res, err = tx.Stmt(stmts[qry]).Exec(cardId, amount, description, "TOP-UP")
+
+	if err != nil {
+		return -1, models.ErrorWrap(err)
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return -1, models.ErrorWrap(err)
+	}
+
+	id64, err := res.LastInsertId()
+
+	if err != nil {
+		return -1, models.ErrorWrap(err)
+	}
+
+	return int(id64), nil
+}
+
+func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
+
+	//if amount <= 0 {
+	//	return -1, models.ConstructApiError(400, MESSAGE_INVALID_AMOUNT, "Capture", float32(amount)/100)
+	//}
+	//
+	//_, apiErr := d.GetCard(cardId)
+	//
+	//if apiErr != nil {
+	//
+	//	if apiErr.StatusCode() == 500 {
+	//		return -1, apiErr
+	//	}
+	//
+	//	return -1, models.ConstructApiError(400, MESSAGE_INVALID_CARD, "TopUp", cardId)
+	//}
+	//
+	//tx, err := dbx.Begin()
+	//
+	//if err != nil {
+	//	return -1, models.ErrorWrap(err)
+	//}
+	//
+	//defer tx.Rollback()
+	//
+	//qry := QUERY_UPDATE_CARD
+	//
+	//_, prepared := stmts[qry]
+	//
+	//if !prepared {
+	//
+	//	stmts[qry], err = dbx.Prepare(qry)
+	//
+	//	if err != nil {
+	//		return -1, models.ErrorWrap(err)
+	//	}
+	//}
+	//
+	//res, err := tx.Stmt(stmts[qry]).Exec(amount, amount, cardId)
+	//
+	//if err != nil {
+	//	return -1, models.ErrorWrap(err)
+	//}
+	//
+	////double check that exactly one row was updated
+	//
+	//affected, err := res.RowsAffected()
+	//
+	//if affected != int64(1) {
+	//	return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "TopUp")
+	//}
+	//
+	//qry = QUERY_ADD_MOVEMENT
+	//
+	//_, prepared = stmts[qry]
+	//
+	//if !prepared {
+	//
+	//	stmts[qry], err = dbx.Prepare(qry)
+	//
+	//	if err != nil {
+	//		return -1, models.ErrorWrap(err)
+	//	}
+	//}
+	//
+	//res, err = tx.Stmt(stmts[qry]).Exec(cardId, amount, description, "TOP-UP")
+	//
+	//if err != nil {
+	//	return -1, models.ErrorWrap(err)
+	//}
+	//
+	//err = tx.Commit()
+	//
+	//if err != nil {
+	//	return -1, models.ErrorWrap(err)
+	//}
+	//
+	//id64, err := res.LastInsertId()
+	//
+	//if err != nil {
+	//	return -1, models.ErrorWrap(err)
+	//}
+	//
+	//return int(id64), nil
+
+	return -1, models.ConstructApiError(500, "undefined")
+}

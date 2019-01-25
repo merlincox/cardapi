@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS authorisations (
   description        VARCHAR(256) NOT NULL,
   amount             INT          NOT NULL,
   captured           INT          NOT NULL DEFAULT 0,
+  refunded           INT          NOT NULL DEFAULT 0,
   ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX authorisation_card_idx (card_id),
