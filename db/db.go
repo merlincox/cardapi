@@ -2,9 +2,9 @@ package db
 
 import (
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/merlincox/cardapi/models"
+	"github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -31,8 +31,7 @@ const (
 	QUERY_ADD_MOVEMENT = `INSERT INTO movements (card_id, amount, description, movement_type) 
                                VALUES (?, ?, ?, ?)`
 
-	ERROR_NOT_FOUND   = "sql: no rows in result set"
-	ERROR_FOREIGN_KEY = "Error 1216: Cannot add or update a child row: a foreign key constraint fails"
+	MYSQL_ERROR_FOREIGN_KEY = 1216
 
 	MESSAGE_GET_CUSTOMER_BAD_ID = "GetCustomer: no customer with id: %v"
 	MESSAGE_GET_VENDOR_BAD_ID   = "GetVendor: no vendor with id: %v"
@@ -116,17 +115,27 @@ func (d *dbGate) Ping() models.ApiError {
 func (d *dbGate) Close() {
 
 	for _, stmt := range stmts {
-		//log.Printf("Closing prepared query '%v'\n", qry)
 		stmt.Close()
 	}
 
 	if dbx != nil {
-		//log.Printf("Closing connection\n")
 		dbx.Close()
 	}
 
 	stmts = make(map[string]*sql.Stmt)
 	dbx = nil
+}
+
+func prepareQry(qry string) (err error) {
+
+	_, prepared := stmts[qry]
+
+	if !prepared {
+
+		stmts[qry], err = dbx.Prepare(qry)
+	}
+
+	return
 }
 
 func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
@@ -139,15 +148,10 @@ func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
 
 	qry := QUERY_GET_VENDORS
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return vs, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return vs, models.ErrorWrap(err)
 	}
 
 	rows, err := stmts[qry].Query()
@@ -184,15 +188,10 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 
 	qry := QUERY_GET_CUSTOMERS
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return cs, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return cs, models.ErrorWrap(err)
 	}
 
 	rows, err := stmts[qry].Query()
@@ -228,21 +227,16 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 
 	qry := QUERY_GET_CUSTOMER
 
-	_, already := stmts[qry]
+	err = prepareQry(qry)
 
-	if !already {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return c, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return c, models.ErrorWrap(err)
 	}
 
 	err = stmts[qry].QueryRow(id).Scan(&c.Id, &c.Fullname)
 
 	if err != nil {
-		if err.Error() == ERROR_NOT_FOUND {
+		if err == sql.ErrNoRows {
 			return c, models.ConstructApiError(404, MESSAGE_GET_CUSTOMER_BAD_ID, id)
 		}
 		return c, models.ErrorWrap(err)
@@ -260,21 +254,16 @@ func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 
 	qry := QUERY_GET_VENDOR
 
-	_, already := stmts[qry]
+	err = prepareQry(qry)
 
-	if !already {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return v, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return v, models.ErrorWrap(err)
 	}
 
 	err = stmts[qry].QueryRow(id).Scan(&v.Id, &v.Fullname)
 
 	if err != nil {
-		if err.Error() == ERROR_NOT_FOUND {
+		if err == sql.ErrNoRows {
 			return v, models.ConstructApiError(404, MESSAGE_GET_VENDOR_BAD_ID, id)
 		}
 		return v, models.ErrorWrap(err)
@@ -292,21 +281,16 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 
 	qry := QUERY_GET_CARD
 
-	_, already := stmts[qry]
+	err = prepareQry(qry)
 
-	if !already {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return c, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return c, models.ErrorWrap(err)
 	}
 
 	err = stmts[qry].QueryRow(id).Scan(&c.Id, &c.Balance, &c.Available, &c.Ts)
 
 	if err != nil {
-		if err.Error() == ERROR_NOT_FOUND {
+		if err == sql.ErrNoRows {
 			return c, models.ConstructApiError(404, MESSAGE_GET_CARD_BAD_ID, id)
 		}
 		return c, models.ErrorWrap(err)
@@ -324,15 +308,10 @@ func (d *dbGate) AddVendor(fullname string) (models.Vendor, models.ApiError) {
 
 	qry := QUERY_ADD_VENDOR
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return v, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return v, models.ErrorWrap(err)
 	}
 
 	res, err := stmts[qry].Exec(fullname)
@@ -358,84 +337,77 @@ func (d *dbGate) AddVendor(fullname string) (models.Vendor, models.ApiError) {
 func (d *dbGate) AddCustomer(fullname string) (models.Customer, models.ApiError) {
 
 	var (
-		v   models.Customer
+		c   models.Customer
 		err error
 	)
 
 	qry := QUERY_ADD_CUSTOMER
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return v, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return c, models.ErrorWrap(err)
 	}
 
 	res, err := stmts[qry].Exec(fullname)
 
 	if err != nil {
-		return v, models.ErrorWrap(err)
+		return c, models.ErrorWrap(err)
 	}
 
 	id64, err := res.LastInsertId()
 
 	if err != nil {
-		return v, models.ErrorWrap(err)
+		return c, models.ErrorWrap(err)
 	}
 
-	v = models.Customer{
+	c = models.Customer{
 		Fullname: fullname,
 		Id:       int(id64),
 	}
 
-	return v, nil
+	return c, nil
 }
 
 func (d *dbGate) AddCard(customerId int) (models.Card, models.ApiError) {
 
 	var (
-		v   models.Card
+		c   models.Card
 		err error
 	)
 
 	qry := QUERY_ADD_CARD
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return v, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return c, models.ErrorWrap(err)
 	}
 
 	res, err := stmts[qry].Exec(customerId)
 
-	if err != nil {
-		if err.Error() == ERROR_FOREIGN_KEY {
-			return v, models.ConstructApiError(400, MESSAGE_ADD_CARD_BAD_ID, customerId)
+	if err!= nil {
+		if driverErr, ok := err.(*mysql.MySQLError); ok {
+			if driverErr.Number == MYSQL_ERROR_FOREIGN_KEY  {
+				return c, models.ConstructApiError(400, MESSAGE_ADD_CARD_BAD_ID, customerId)
+			}
 		}
-		return v, models.ErrorWrap(err)
+		return c, models.ErrorWrap(err)
 	}
+
 
 	id64, err := res.LastInsertId()
 
 	if err != nil {
-		return v, models.ErrorWrap(err)
+		return c, models.ErrorWrap(err)
 	}
 
-	v = models.Card{
+	c = models.Card{
 		CustomerId: customerId,
 		Id:         int(id64),
 	}
 
-	return v, nil
+	return c, nil
 }
 
 func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError) {
@@ -480,15 +452,10 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 
 	qry := QUERY_AUTHORISE
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return -1, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return -1, models.ErrorWrap(err)
 	}
 
 	res, err := tx.Stmt(stmts[qry]).Exec(amount, cardId, amount)
@@ -507,15 +474,10 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 
 	qry = QUERY_ADD_AUTHORISATION
 
-	_, prepared = stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return -1, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return -1, models.ErrorWrap(err)
 	}
 
 	res, err = tx.Stmt(stmts[qry]).Exec(cardId, vendorId, amount, description)
@@ -566,15 +528,10 @@ func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiE
 
 	qry := QUERY_UPDATE_CARD
 
-	_, prepared := stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return -1, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return -1, models.ErrorWrap(err)
 	}
 
 	res, err := tx.Stmt(stmts[qry]).Exec(amount, amount, cardId)
@@ -593,15 +550,10 @@ func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiE
 
 	qry = QUERY_ADD_MOVEMENT
 
-	_, prepared = stmts[qry]
+	err = prepareQry(qry)
 
-	if !prepared {
-
-		stmts[qry], err = dbx.Prepare(qry)
-
-		if err != nil {
-			return -1, models.ErrorWrap(err)
-		}
+	if err != nil {
+		return -1, models.ErrorWrap(err)
 	}
 
 	res, err = tx.Stmt(stmts[qry]).Exec(cardId, amount, description, "TOP-UP")

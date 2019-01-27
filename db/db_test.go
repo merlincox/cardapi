@@ -7,6 +7,7 @@ import (
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 
 	"github.com/merlincox/cardapi/utils"
+	"github.com/go-sql-driver/mysql"
 )
 
 func testWrapper(t *testing.T, callback func(*testing.T, sqlmock.Sqlmock, Dbi)) {
@@ -197,7 +198,10 @@ func TestAddCardOK(t *testing.T) {
 func TestAddCardNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		err := fmt.Errorf(ERROR_FOREIGN_KEY)
+		err := &mysql.MySQLError{
+			Number:  MYSQL_ERROR_FOREIGN_KEY,
+			Message: "(Foreign key violation)",
+		}
 
 		// Not sure why square brackets are needed here..
 		expecter.ExpectPrepare("[" + QUERY_ADD_CARD + "]").ExpectExec().WithArgs(1099).WillReturnError(err)
