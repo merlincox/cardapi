@@ -191,3 +191,5 @@ func TestCalcRouteNegInf(t *testing.T) {
 func TestCalcRouteNaN(t *testing.T) {
 	testCalcRouteBad(t, -1,2, "root", "When sending a request to the /calc route with NaN result", "Out of limits: -1 root 2")
 }
+
+//@TODO mock the dbi and write tests for card API routes

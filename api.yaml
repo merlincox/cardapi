@@ -252,26 +252,290 @@ Resources:
                  requestTemplates:
                    application/json: "{\"statusCode\": 200}"
                  type: "mock"
-          /card-request:
+          /authorise:
              post:
-               summary: Post a request
+               summary: Request an authorisation
                requestBody:
-                 description: A request
+                 description: A code request
                  required: true
                  content:
                    application/json:
                      schema:
-                       $ref: '#/definitions/CardRequest'
+                       $ref: '#/definitions/CodeRequest'
                    application/x-www-form-urlencoded:
                      schema:
-                       $ref: '#/definitions/CardRequest'
+                       $ref: '#/definitions/CodeRequest'
                produces:
                - "application/json"
                responses:
                  '200':
                    description: "200 response"
                    schema:
-                     $ref: "#/definitions/CardResponse"
+                     $ref: "#/definitions/CodeResponse"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /capture:
+             post:
+               summary: Request to capture all or part of an authorised payment
+               requestBody:
+                 description: A request
+                 required: true
+                 content:
+                   application/json:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+                   application/x-www-form-urlencoded:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CodeResponse"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /reverse:
+             post:
+               summary: Request to reverse all or part of a payment authorisation
+               requestBody:
+                 description: A request
+                 required: true
+                 content:
+                   application/json:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+                   application/x-www-form-urlencoded:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CodeResponse"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /top-up:
+             post:
+               summary: Request to top-up a card
+               requestBody:
+                 description: A request
+                 required: true
+                 content:
+                   application/json:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+                   application/x-www-form-urlencoded:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CodeResponse"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /refund:
+             post:
+               summary: Request to refund all or part of a captured payment
+               requestBody:
+                 description: A code request
+                 required: true
+                 content:
+                   application/json:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+                   application/x-www-form-urlencoded:
+                     schema:
+                       $ref: '#/definitions/CodeRequest'
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CodeResponse"
                    headers:
                      Cache-Control:
                        type: "string"
@@ -456,46 +720,33 @@ Resources:
               ts:
                 type: "string"
             description: "Authorisation"
-          CardRequest:
+          CodeRequest:
             type: "object"
             required:
-            - "cardId"
-            - "vendorId"
             - "amount"
-            - "description"
             - "requestType"
             properties:
-              cardId:
-                type: "integer"
               requestType:
                 type: "string"
+              amount:
+                type: "integer"
+              cardId:
+                type: "integer"
               vendorId:
                 type: "integer"
-              amount:
+              authorisationId:
                 type: "integer"
               description:
                 type: "string"
-            description: "Card Request"
-          CardResponse:
+            description: "Request for a code"
+          CodeResponse:
             type: "object"
             required:
             - "id"
-            - "cardId"
-            - "vendorId"
-            - "amount"
-            - "description"
             - "requestType"
             properties:
               id:
                 type: "integer"
-              cardId:
-                type: "integer"
               requestType:
                 type: "string"
-              vendorId:
-                type: "integer"
-              amount:
-                type: "integer"
-              description:
-                type: "string"
-            description: "Card Response"
+            description: "Response to a request for a code"

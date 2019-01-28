@@ -24,17 +24,16 @@ type Front struct {
 	cacheMaxAge int
 }
 
-
 type FrontHandler func(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)
 type innerHandler func(request events.APIGatewayProxyRequest) (interface{}, models.ApiError)
 
 // NewFront Create a new Front object
 //
-func NewFront(dbi         db.Dbi, status models.Status, cacheMaxAge int) Front {
+func NewFront(dbi db.Dbi, status models.Status, cacheMaxAge int) Front {
 
 	f := Front{
-		dbi: dbi,
-		status: status,
+		dbi:         dbi,
+		status:      status,
 		cacheMaxAge: cacheMaxAge,
 	}
 
@@ -76,9 +75,12 @@ func (front *Front) getHandlerForRoute(route string) innerHandler {
 	case "GET/calc/{op}":
 		return front.calcHandler
 
-	case "POST/card-request":
-		return front.cardRequestHandler
-
+	case "POST/authorise",
+		"POST/refund",
+		"POST/reverse",
+		"POST/top-up",
+		"POST/capture":
+		return front.codeRequestHandler
 	}
 
 	return front.unknownRouteHandler
@@ -130,6 +132,6 @@ func (front *Front) buildResponse(data interface{}, err models.ApiError) events.
 		Headers: map[string]string{
 			"Cache-Control":               "max-age=" + strconv.Itoa(front.cacheMaxAge),
 			"Access-Control-Allow-Origin": "*",
-			"X-Timestamp":        time.Now().UTC().Format(time.RFC3339Nano),
+			"X-Timestamp":                 time.Now().UTC().Format(time.RFC3339Nano),
 		}}
 }

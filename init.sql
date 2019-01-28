@@ -9,8 +9,9 @@ ALTER TABLE customers
   AUTO_INCREMENT = 1001;
 
 CREATE TABLE IF NOT EXISTS vendors (
-  id       INT          NOT NULL AUTO_INCREMENT,
-  fullname VARCHAR(256) NOT NULL,
+  id          INT          NOT NULL AUTO_INCREMENT,
+  vendor_name VARCHAR(256) NOT NULL,
+  balance     INT NOT NULL DEFAULT 0,
   PRIMARY KEY (id)
 )
   ENGINE = INNODB;
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS authorisations (
   amount             INT          NOT NULL,
   captured           INT          NOT NULL DEFAULT 0,
   refunded           INT          NOT NULL DEFAULT 0,
+  reversed           INT          NOT NULL DEFAULT 0,
   ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   INDEX authorisation_card_idx (card_id),
@@ -81,11 +83,31 @@ CREATE TABLE IF NOT EXISTS authorisations (
 ALTER TABLE authorisations
   AUTO_INCREMENT = 1001;
 
+CREATE TABLE IF NOT EXISTS auth_movements (
+  id               INT          NOT NULL AUTO_INCREMENT,
+  authorisation_id INT,
+  movement_type    VARCHAR(256) NOT NULL,
+  description      VARCHAR(256) NOT NULL,
+  amount           INT          NOT NULL,
+  ts               TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX movement_auth_idx (authorisation_id),
+  FOREIGN KEY (authorisation_id)
+  REFERENCES authorisations (id)
+    ON DELETE RESTRICT
+    ON UPDATE RESTRICT
+)
+  ENGINE = INNODB;
+
+ALTER TABLE auth_movements
+  AUTO_INCREMENT = 1001;
+
 INSERT INTO customers (fullname)
 VALUES ('John Smith'),('Jane Doe');
 
-INSERT INTO vendors (fullname)
+INSERT INTO vendors (vendor_name)
 VALUES('Coffee Shop 1'),('Supermarket 1'),('Pub 1');
 
 INSERT INTO cards (customer_id, balance, available)
 VALUES(1001, 100000, 100000);
+

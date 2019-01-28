@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"fmt"
 	"math"
+	"encoding/json"
 
 	"golang.org/x/text/message"
 	"golang.org/x/text/language"
@@ -11,7 +12,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 
 	"github.com/merlincox/cardapi/models"
-	"encoding/json"
 )
 
 func (front Front) statusHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
@@ -19,11 +19,11 @@ func (front Front) statusHandler(request events.APIGatewayProxyRequest) (interfa
 	return front.status, nil
 }
 
-type cardRequestHandler func(request models.CardRequest) (interface{}, models.ApiError)
+type codeRequestHandler func(request models.CodeRequest) (int, models.ApiError)
 
-func (front Front) cardRequestHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 
-	cr := models.CardRequest{}
+	cr := models.CodeRequest{}
 
 	err := json.Unmarshal([]byte(request.Body), &cr)
 
@@ -31,38 +31,87 @@ func (front Front) cardRequestHandler(request events.APIGatewayProxyRequest) (in
 		return nil, models.ErrorWrap(err)
 	}
 
-	var subHandler cardRequestHandler
+	var subHandler codeRequestHandler
 
 	switch cr.RequestType {
+
+	case "TOP-UP":
+		subHandler = front.authoriseHandler
 
 	case "AUTHORISATION":
 		subHandler = front.authoriseHandler
 
+	case "CAPTURE":
+		subHandler = front.captureHandler
+
+	case "REFUND":
+		subHandler = front.refundHandler
+
+	case "REVERT":
+		subHandler = front.reversalHandler
+
 	default:
-		return nil, models.ConstructApiError(400, "Unsupported card request type: %v", cr.RequestType)
-
+		return nil, models.ConstructApiError(400, "Unsupported code request type: %v", cr.RequestType)
 	}
 
-	return subHandler(cr)
-}
+	id, apiErr := subHandler(cr)
 
-func (front Front) authoriseHandler(cr models.CardRequest) (interface{}, models.ApiError) {
-
-	id, err := front.dbi.Authorise(cr.CardId, cr.VendorId, cr.Amount, cr.Description)
-
-	if err != nil {
-		return nil, err
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
-	return models.CardResponse{
-		Amount:      cr.Amount,
-		CardId:      cr.CardId,
-		Description: cr.Description,
+	return models.CodeResponse{
 		Id:          id,
 		RequestType: cr.RequestType,
-		VendorId:    cr.VendorId,
 	}, nil
 }
+
+func (front Front) authoriseHandler(cr models.CodeRequest) (int, models.ApiError) {
+
+	if cr.VendorId < 1 || cr.CardId  < 1 || cr.Amount < 1 || cr.Description == "" {
+		return -1, models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
+	}
+
+	return front.dbi.Authorise(cr.CardId, cr.VendorId, cr.Amount, cr.Description)
+}
+
+func (front Front) captureHandler(cr models.CodeRequest) (int, models.ApiError) {
+
+	if cr.AuthorisationId < 1 || cr.Amount < 1 {
+		return -1, models.ConstructApiError(400, "Malformed capture request: valid authorisationId, amount required")
+	}
+
+	return front.dbi.Capture(cr.AuthorisationId, cr.Amount)
+}
+
+func (front Front) refundHandler(cr models.CodeRequest) (int, models.ApiError) {
+
+	if cr.AuthorisationId < 1 || cr.Amount < 1 || cr.Description == "" {
+		return -1, models.ConstructApiError(400, "Malformed refund request: valid authorisationId, amount, description required")
+	}
+
+	return front.dbi.Refund(cr.AuthorisationId, cr.Amount, cr.Description)
+}
+
+func (front Front) reversalHandler(cr models.CodeRequest) (int, models.ApiError) {
+
+	if cr.AuthorisationId < 1 || cr.Amount < 1 || cr.Description == "" {
+		return -1, models.ConstructApiError(400, "Malformed reversal request: valid authorisationId, amount, description required")
+	}
+
+	return front.dbi.Refund(cr.AuthorisationId, cr.Amount, cr.Description)
+}
+
+func (front Front) topUpHandler(cr models.CodeRequest) (int, models.ApiError) {
+
+	if cr.CardId < 1 || cr.Amount < 1 || cr.Description == "" {
+		return -1, models.ConstructApiError(400, "Malformed top-up request: valid cardId, amount, description required")
+	}
+
+	return front.dbi.TopUp(cr.CardId, cr.Amount, cr.Description)
+}
+
+//left for backwards compatibility: please ignore
 
 func (front Front) calcHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 

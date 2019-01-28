@@ -11,14 +11,11 @@ type CalculationResult struct {
 	Val2   float64 `json:"val2"`
 }
 
-// CardResponse: Card Request
-type CardResponse struct {
-	Amount      int `json:"amount"`
-	CardId      int `json:"cardId"`
-	Description string  `json:"description"`
+// CodeResponse: response to a CodeRequest
+type CodeResponse struct {
+
 	Id          int `json:"id"`
 	RequestType string  `json:"requestType"`
-	VendorId    int `json:"vendorId"`
 }
 
 // Empty: (No description)
@@ -34,11 +31,12 @@ type Status struct {
 	Timestamp string `json:"timestamp"`
 }
 
-type CardRequest struct {
+type CodeRequest struct {
 
-	VendorId int `json:"vendorId"`
-	CardId int `json:"cardId"`
+	AuthorisationId int `json:"authorisationId,omitempty"`
+	VendorId int `json:"vendorId,omitempty"`
+	CardId int `json:"cardId,omitempty"`
 	RequestType string `json:"requestType"`
 	Amount int `json:"amount"`
-	Description string `json:"description"`
+	Description string `json:"description,omitempty"`
 }

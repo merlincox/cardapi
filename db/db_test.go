@@ -10,6 +10,10 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
+func badIdMessage(methodName, objectName string, id int) string {
+	return fmt.Sprintf(MESSAGE_BAD_ID, methodName, objectName, id)
+}
+
 func testWrapper(t *testing.T, callback func(*testing.T, sqlmock.Sqlmock, Dbi)) {
 
 	mockDb, expecter, _ := sqlmock.New()
@@ -24,9 +28,9 @@ func testWrapper(t *testing.T, callback func(*testing.T, sqlmock.Sqlmock, Dbi)) 
 func TestGetVendors(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "a shop").
-			AddRow(int64(2002), "a pub")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "a shop", 1234).
+			AddRow(int64(2002), "a pub", 999)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDORS).ExpectQuery().WillReturnRows(expected)
 
@@ -34,8 +38,9 @@ func TestGetVendors(t *testing.T) {
 
 		utils.AssertNoError(t, "Calling GetVendors", apiErr)
 		utils.AssertEquals(t, "Size of GetVendors result", 2, len(vs))
-		utils.AssertEquals(t, "Fullname for GetVendors result[0]", "a shop", vs[0].Fullname)
+		utils.AssertEquals(t, "VendorName for GetVendors result[0]", "a shop", vs[0].VendorName)
 		utils.AssertEquals(t, "Id for GetVendors result[0]", 1001, vs[0].Id)
+		utils.AssertEquals(t, "Balance for GetVendors result[0]", 1234, vs[0].Balance)
 	})
 }
 
@@ -52,7 +57,7 @@ func TestGetCustomers(t *testing.T) {
 
 		utils.AssertNoError(t, "Calling GetCustomers", apiErr)
 		utils.AssertEquals(t, "Size of GetCustomers result", 2, len(vs))
-		utils.AssertEquals(t, "Fullname for GetCustomers result[0]", "Fred Bloggs", vs[0].Fullname)
+		utils.AssertEquals(t, "VendorName for GetCustomers result[0]", "Fred Bloggs", vs[0].Fullname)
 		utils.AssertEquals(t, "Id for GetCustomers result[0]", 1001, vs[0].Id)
 	})
 }
@@ -68,7 +73,7 @@ func TestGetCustomer(t *testing.T) {
 		v, apiErr := dbi.GetCustomer(1001)
 
 		utils.AssertNoError(t, "Calling GetCustomer", apiErr)
-		utils.AssertEquals(t, "Fullname for GetCustomer result", "Fred Bloggs", v.Fullname)
+		utils.AssertEquals(t, "VendorName for GetCustomer result", "Fred Bloggs", v.Fullname)
 		utils.AssertEquals(t, "Id for GetCustomer result", 1001, v.Id)
 	})
 }
@@ -83,22 +88,22 @@ func TestGetCustomerNotFound(t *testing.T) {
 		_, apiErr := dbi.GetCustomer(1001)
 
 		utils.AssertEquals(t, "Return status for calling GetCustomer with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetCustomer with bad id 1001", fmt.Sprintf(MESSAGE_GET_CUSTOMER_BAD_ID, 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling GetCustomer with bad id 1001", badIdMessage("GetCustomer", "customer", 1001), apiErr.Error())
 	})
 }
 
 func TestGetVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Coffee Shop")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "Coffee Shop", 0)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		v, apiErr := dbi.GetVendor(1001)
 
 		utils.AssertNoError(t, "Calling GetVendor", apiErr)
-		utils.AssertEquals(t, "Fullname for GetVendor result", "Coffee Shop", v.Fullname)
+		utils.AssertEquals(t, "VendorName for GetVendor result", "Coffee Shop", v.VendorName)
 		utils.AssertEquals(t, "Id for GetVendor result", 1001, v.Id)
 	})
 }
@@ -106,14 +111,14 @@ func TestGetVendor(t *testing.T) {
 func TestGetVendorNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"})
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"})
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		_, apiErr := dbi.GetVendor(1001)
 
 		utils.AssertEquals(t, "Return status for calling GetVendor with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetVendor with bad id 1001", fmt.Sprintf(MESSAGE_GET_VENDOR_BAD_ID, 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling GetVendor with bad id 1001", badIdMessage("GetVendor", "vendor", 1001), apiErr.Error())
 	})
 }
 
@@ -143,7 +148,7 @@ func TestGetCardNotFound(t *testing.T) {
 		_, apiErr := dbi.GetCard(1001)
 
 		utils.AssertEquals(t, "Return status for calling GetCard with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetCard with bad id 1001", fmt.Sprintf(MESSAGE_GET_CARD_BAD_ID, 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling GetCard with bad id 1001", badIdMessage("GetCard", "card", 1001), apiErr.Error())
 	})
 }
 
@@ -158,7 +163,7 @@ func TestAddVendor(t *testing.T) {
 		v, apiErr := dbi.AddVendor("coffee shop")
 
 		utils.AssertNoError(t, "Calling AddVendor", apiErr)
-		utils.AssertEquals(t, "Fullname for AddVendor result", "coffee shop", v.Fullname)
+		utils.AssertEquals(t, "VendorName for AddVendor result", "coffee shop", v.VendorName)
 		utils.AssertEquals(t, "Id for AddVendor result", 1001, v.Id)
 	})
 }
@@ -174,7 +179,7 @@ func TestAddCustomer(t *testing.T) {
 		v, apiErr := dbi.AddCustomer("Fred Bloggs")
 
 		utils.AssertNoError(t, "Calling AddCustomer", apiErr)
-		utils.AssertEquals(t, "Fullname for AddCustomer result", "Fred Bloggs", v.Fullname)
+		utils.AssertEquals(t, "VendorName for AddCustomer result", "Fred Bloggs", v.Fullname)
 		utils.AssertEquals(t, "Id for AddCustomer result", 1001, v.Id)
 	})
 }
@@ -209,15 +214,15 @@ func TestAddCardNotFound(t *testing.T) {
 		_, apiErr := dbi.AddCard(1099)
 
 		utils.AssertEquals(t, "Return status for calling AddCard with a bad customerId", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling AddCard with bad customerId 1099", fmt.Sprintf(MESSAGE_ADD_CARD_BAD_ID, 1099), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling AddCard with bad customerId 1099", badIdMessage("AddCard", "customer", 1099), apiErr.Error())
 	})
 }
 
 func TestAuthoriseOK(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Coffee Shop")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "Coffee Shop", 999)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
@@ -251,7 +256,6 @@ func TestAuthoriseOK(t *testing.T) {
 	})
 }
 
-
 func TestAuthoriseBadAmount(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
@@ -266,14 +270,14 @@ func TestAuthoriseBadAmount(t *testing.T) {
 func TestAuthoriseBadVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"})
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"})
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
 		utils.AssertEquals(t, "Return status for calling Authorise with a bad vendorId", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling Authorise with a bad vendorId 1001", fmt.Sprintf(MESSAGE_INVALID_VENDOR, "Authorise", 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling Authorise with a bad vendorId 1001", badIdMessage("Authorise", "vendor", 1001), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling Authorise with a bad vendorId", -1, aid)
 	})
 }
@@ -281,8 +285,8 @@ func TestAuthoriseBadVendor(t *testing.T) {
 func TestAuthoriseBadCard(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Coffee Shop")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "Coffee Shop", 999)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
@@ -293,7 +297,7 @@ func TestAuthoriseBadCard(t *testing.T) {
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
 		utils.AssertEquals(t, "Return status for calling Authorise with a bad cardId", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling Authorise with a bad cardId 100001", fmt.Sprintf(MESSAGE_INVALID_CARD, "Authorise", 100001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling Authorise with a bad cardId 100001", badIdMessage("Authorise", "card", 100001), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling Authorise with a bad cardId", -1, aid)
 	})
 }
@@ -301,20 +305,20 @@ func TestAuthoriseBadCard(t *testing.T) {
 func TestAuthoriseInsufficientFunds(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Coffee Shop")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "Coffee Shop", 999)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		expected = sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
-		AddRow(int64(100001), 12676, 0, "2019-01-24 01:00:10")
+			AddRow(int64(100001), 12676, 0, "2019-01-24 01:00:10")
 
 		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
 		utils.AssertEquals(t, "Return status for calling Authorise with insufficient funds", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling Authorise with insufficient funds 100001", fmt.Sprintf(MESSAGE_AUTHORISE_INSUFFICIENT_AVAILABLE, 2.1, 0.0), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling Authorise with insufficient funds 100001", fmt.Sprintf(MESSAGE_INSUFFICIENT_AVAILABLE, "Authorise", 2.1, 0.0), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling Authorise with insufficient funds", -1, aid)
 	})
 }
@@ -323,8 +327,8 @@ func TestAuthoriseInsufficientFunds(t *testing.T) {
 func TestAuthoriseInsufficientFunds2(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Coffee Shop")
+		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
+			AddRow(int64(1001), "Coffee Shop", 999)
 
 		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
@@ -347,7 +351,7 @@ func TestAuthoriseInsufficientFunds2(t *testing.T) {
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
 		//utils.AssertEquals(t, "Return status for calling Authorise with insufficient funds", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling Authorise with insufficient funds for £2.10", fmt.Sprintf(MESSAGE_AUTHORISE_INSUFFICIENT_AVAILABLE_FOR, 2.1), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling Authorise with insufficient funds for £2.10", fmt.Sprintf(MESSAGE_INSUFFICIENT_AVAILABLE_FOR, "Authorise", 2.1), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling Authorise with insufficient funds", -1, aid)
 	})
 }
@@ -406,7 +410,20 @@ func TestTopUpBadCard(t *testing.T) {
 		aid, apiErr := dbi.TopUp(100001, 2000, "Transfer from Bank")
 
 		utils.AssertEquals(t, "Return status for calling TopUp with a invalid card", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling TopUp with an invalid card 100001", fmt.Sprintf(MESSAGE_INVALID_CARD, "TopUp", 100001), apiErr.Error())
+		utils.AssertEquals(t, "Return message for calling TopUp with an invalid card 100001", badIdMessage("TopUp", "card", 100001), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling TopUp with an invalid card", -1, aid)
 	})
+}
+
+
+func TestCapture(t *testing.T) {
+	t.Skipf("TODO capture tests")
+}
+
+func TestRefund(t *testing.T) {
+	t.Skipf("TODO refund tests")
+}
+
+func TestReverse(t *testing.T) {
+	t.Skipf("TODO reverse tests")
 }

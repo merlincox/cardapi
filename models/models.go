@@ -66,8 +66,9 @@ type Customer struct {
 
 type Vendor struct {
 
-	Fullname string `json:"fullname"`
-	Id int `json:"id"`
+	VendorName string `json:"vendorName"`
+	Id         int    `json:"id"`
+	Balance    int    `json:balance`
 }
 
 type Card struct {
@@ -86,6 +87,8 @@ type Authorisation struct {
 	VendorId int `json:"vendorId"`
 	Amount int `json:"amount"`
 	Captured int `json:"captured"`
+	Refunded int `json:"captured"`
+	Reversed int `json:"captured"`
 	Description string `json:"description"`
 	Ts string `json:"ts"`
 }
@@ -100,3 +103,12 @@ type Movement struct {
 	Ts string `json:"ts"`
 }
 
+// Amount that can be captured or reversed
+func (auth Authorisation) Capturable() int {
+	return auth.Amount - (auth.Captured + auth.Reversed)
+}
+
+// Amount that can be refunded
+func (auth Authorisation) Refundable() int {
+	return auth.Captured - auth.Refunded
+}
