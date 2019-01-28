@@ -319,18 +319,16 @@ Resources:
           /capture:
              post:
                summary: Request to capture all or part of an authorised payment
-               requestBody:
-                 description: A request
-                 required: true
-                 content:
-                   application/json:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
-                   application/x-www-form-urlencoded:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
+               consumes:
+               - "application/json"
                produces:
                - "application/json"
+               parameters:
+               - in: "body"
+                 name: "CodeRequest"
+                 required: true
+                 schema:
+                   $ref: "#/definitions/CodeRequest"
                responses:
                  '200':
                    description: "200 response"
@@ -385,18 +383,16 @@ Resources:
           /reverse:
              post:
                summary: Request to reverse all or part of a payment authorisation
-               requestBody:
-                 description: A request
-                 required: true
-                 content:
-                   application/json:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
-                   application/x-www-form-urlencoded:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
+               consumes:
+               - "application/json"
                produces:
                - "application/json"
+               parameters:
+               - in: "body"
+                 name: "CodeRequest"
+                 required: true
+                 schema:
+                   $ref: "#/definitions/CodeRequest"
                responses:
                  '200':
                    description: "200 response"
@@ -451,18 +447,16 @@ Resources:
           /top-up:
              post:
                summary: Request to top-up a card
-               requestBody:
-                 description: A request
-                 required: true
-                 content:
-                   application/json:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
-                   application/x-www-form-urlencoded:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
+               consumes:
+               - "application/json"
                produces:
                - "application/json"
+               parameters:
+               - in: "body"
+                 name: "CodeRequest"
+                 required: true
+                 schema:
+                   $ref: "#/definitions/CodeRequest"
                responses:
                  '200':
                    description: "200 response"
@@ -517,18 +511,16 @@ Resources:
           /refund:
              post:
                summary: Request to refund all or part of a captured payment
-               requestBody:
-                 description: A code request
-                 required: true
-                 content:
-                   application/json:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
-                   application/x-www-form-urlencoded:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
+               consumes:
+               - "application/json"
                produces:
                - "application/json"
+               parameters:
+               - in: "body"
+                 name: "CodeRequest"
+                 required: true
+                 schema:
+                   $ref: "#/definitions/CodeRequest"
                responses:
                  '200':
                    description: "200 response"
@@ -634,17 +626,27 @@ Resources:
                 type: "integer"
               fullname:
                 type: "string"
+              cards:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Card"
             description: "Customer"
           Vendor:
             type: "object"
             required:
             - "id"
-            - "fullname"
+            - "vendorName"
             properties:
               id:
                 type: "integer"
-              fullname:
+              balance:
+                type: "integer"
+              vendorName:
                 type: "string"
+              authorisations:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Authorisation"
             description: "Vendor"
           Card:
             type: "object"
@@ -665,6 +667,10 @@ Resources:
                 type: "integer"
               ts:
                 type: "string"
+              movements:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Movement"
             description: "Card"
           Movement:
             type: "object"
@@ -688,7 +694,7 @@ Resources:
                 type: "string"
               ts:
                 type: "string"
-            description: "Money movement"
+            description: "Card movement: top-up, purchase or refund"
           Authorisation:
             type: "object"
             required:
@@ -717,7 +723,34 @@ Resources:
                 type: "string"
               ts:
                 type: "string"
+              movements:
+                type: "array"
+                items:
+                  $ref: "#/definitions/AuthMovement"
             description: "Authorisation"
+          AuthMovement:
+            type: "object"
+            required:
+            - "id"
+            - "authorisationId"
+            - "movementType"
+            - "amount"
+            - "description"
+            - "ts"
+            properties:
+              id:
+                type: "integer"
+              authorisationId:
+                type: "integer"
+              movementType:
+                type: "string"
+              amount:
+                type: "integer"
+              description:
+                type: "string"
+              ts:
+                type: "string"
+            description: "Authorisation movement: capture, refund or reversal"
           CodeRequest:
             type: "object"
             required:
