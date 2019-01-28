@@ -11,10 +11,18 @@ type CalculationResult struct {
 	Val2   float64 `json:"val2"`
 }
 
-// CodeResponse: response to a CodeRequest
-type CodeResponse struct {
+// CodeRequest: Request for a code
+type CodeRequest struct {
+	Amount          int    `json:"amount"`
+	AuthorisationId int    `json:"authorisationId,omitempty"`
+	CardId          int    `json:"cardId,omitempty"`
+	Description     string `json:"description,omitempty"`
+	VendorId        int    `json:"vendorId,omitempty"`
+}
 
-	Id          int `json:"id"`
+// CodeResponse: Response to a request for a code
+type CodeResponse struct {
+	Id int `json:"id"`
 }
 
 // Empty: (No description)
@@ -28,13 +36,4 @@ type Status struct {
 	Platform  string `json:"platform"`
 	Release   string `json:"release"`
 	Timestamp string `json:"timestamp"`
-}
-
-type CodeRequest struct {
-
-	AuthorisationId int `json:"authorisationId,omitempty"`
-	VendorId int `json:"vendorId,omitempty"`
-	CardId int `json:"cardId,omitempty"`
-	Amount int `json:"amount"`
-	Description string `json:"description,omitempty"`
 }
