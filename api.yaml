@@ -252,6 +252,212 @@ Resources:
                  requestTemplates:
                    application/json: "{\"statusCode\": 200}"
                  type: "mock"
+          /card/{id}:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
+               - name: "from"
+                 in: "query"
+                 required: false
+                 type: "string"
+               - name: "until"
+                 in: "query"
+                 required: false
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Card"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.path.id"
+                 - "method.request.querystring.from"
+                 - "method.request.querystring.until"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /customer/{id}:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Customer"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.path.id"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /vendor/{id}:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
+               - name: "from"
+                 in: "query"
+                 required: false
+                 type: "string"
+               - name: "until"
+                 in: "query"
+                 required: false
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Vendor"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.path.id"
+                 - "method.request.querystring.from"
+                 - "method.request.querystring.until"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
           /authorise:
              post:
                summary: Request an authorisation code
