@@ -800,7 +800,7 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(0, amount, 0, auth.Id)
+	res, err = tx.Stmt(stmts[qry]).Exec(0, 0, amount, auth.Id)
 
 	if err != nil {
 		return -1, models.ErrorWrap(err)
