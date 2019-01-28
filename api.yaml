@@ -254,19 +254,17 @@ Resources:
                  type: "mock"
           /authorise:
              post:
-               summary: Request an authorisation
-               requestBody:
-                 description: A code request
-                 required: true
-                 content:
-                   application/json:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
-                   application/x-www-form-urlencoded:
-                     schema:
-                       $ref: '#/definitions/CodeRequest'
+               summary: Request an authorisation code
+               consumes:
+               - "application/json"
                produces:
                - "application/json"
+               parameters:
+               - in: "body"
+                 name: "CodeRequest"
+                 required: true
+                 schema:
+                   $ref: "#/definitions/CodeRequest"
                responses:
                  '200':
                    description: "200 response"
