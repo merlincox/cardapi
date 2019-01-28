@@ -33,25 +33,25 @@ func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (in
 
 	var subHandler codeRequestHandler
 
-	switch cr.RequestType {
+	switch request.RequestContext.ResourcePath {
 
-	case "TOP-UP":
+	case "/top-up":
 		subHandler = front.authoriseHandler
 
-	case "AUTHORISATION":
+	case "/authorise":
 		subHandler = front.authoriseHandler
 
-	case "CAPTURE":
+	case "/capture":
 		subHandler = front.captureHandler
 
-	case "REFUND":
+	case "/refund":
 		subHandler = front.refundHandler
 
-	case "REVERT":
+	case "/revert":
 		subHandler = front.reversalHandler
 
 	default:
-		return nil, models.ConstructApiError(400, "Unsupported code request type: %v", cr.RequestType)
+		return nil, models.ConstructApiError(400, "Unsupported code request route: %v", request.RequestContext.ResourcePath)
 	}
 
 	id, apiErr := subHandler(cr)
@@ -62,7 +62,6 @@ func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (in
 
 	return models.CodeResponse{
 		Id:          id,
-		RequestType: cr.RequestType,
 	}, nil
 }
 

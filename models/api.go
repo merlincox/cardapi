@@ -15,7 +15,6 @@ type CalculationResult struct {
 type CodeResponse struct {
 
 	Id          int `json:"id"`
-	RequestType string  `json:"requestType"`
 }
 
 // Empty: (No description)
@@ -36,7 +35,6 @@ type CodeRequest struct {
 	AuthorisationId int `json:"authorisationId,omitempty"`
 	VendorId int `json:"vendorId,omitempty"`
 	CardId int `json:"cardId,omitempty"`
-	RequestType string `json:"requestType"`
 	Amount int `json:"amount"`
 	Description string `json:"description,omitempty"`
 }

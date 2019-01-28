@@ -724,10 +724,7 @@ Resources:
             type: "object"
             required:
             - "amount"
-            - "requestType"
             properties:
-              requestType:
-                type: "string"
               amount:
                 type: "integer"
               cardId:
@@ -743,10 +740,7 @@ Resources:
             type: "object"
             required:
             - "id"
-            - "requestType"
             properties:
               id:
                 type: "integer"
-              requestType:
-                type: "string"
             description: "Response to a request for a code"
