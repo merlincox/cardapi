@@ -87,8 +87,8 @@ type Authorisation struct {
 	VendorId int `json:"vendorId"`
 	Amount int `json:"amount"`
 	Captured int `json:"captured"`
-	Refunded int `json:"captured"`
-	Reversed int `json:"captured"`
+	Refunded int `json:"refunded"`
+	Reversed int `json:"reversed"`
 	Description string `json:"description"`
 	Ts string `json:"ts"`
 }
