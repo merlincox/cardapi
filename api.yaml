@@ -910,6 +910,7 @@ Resources:
             - "amount"
             - "captured"
             - "refunded"
+            - "reversed"
             - "description"
             - "ts"
             properties:
@@ -924,6 +925,8 @@ Resources:
               captured:
                 type: "integer"
               refunded:
+                type: "integer"
+              reversed:
                 type: "integer"
               description:
                 type: "string"

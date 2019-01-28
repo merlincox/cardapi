@@ -58,52 +58,6 @@ func ErrorWrap(err error) ApiError {
 	}
 }
 
-type Customer struct {
-
-	Fullname string `json:"fullname"`
-	Id int `json:"id"`
-}
-
-type Vendor struct {
-
-	VendorName string `json:"vendorName"`
-	Id         int    `json:"id"`
-	Balance    int    `json:balance`
-}
-
-type Card struct {
-
-	Id int `json:"id"`
-	Available int `json:"available"`
-	Balance int `json:"balance"`
-	CustomerId int `json:"customeriId"`
-	Ts string `json:"ts"`
-	Movements []Movement `json:"movements,omitempty"`
-}
-
-type Authorisation struct {
-
-	Id int `json:"id"`
-	CardId int `json:"cardId"`
-	VendorId int `json:"vendorId"`
-	Amount int `json:"amount"`
-	Captured int `json:"captured"`
-	Refunded int `json:"refunded"`
-	Reversed int `json:"reversed"`
-	Description string `json:"description"`
-	Ts string `json:"ts"`
-}
-
-type Movement struct {
-
-	Id int `json:"id"`
-	CardId int `json:"cardId"`
-	MovementType string `json:"movementType"`
-	Amount int `json:"amount"`
-	Description string `json:"description"`
-	Ts string `json:"ts"`
-}
-
 // Amount that can be captured or reversed
 func (auth Authorisation) Capturable() int {
 	return auth.Amount - (auth.Captured + auth.Reversed)
