@@ -442,10 +442,6 @@ func (d *dbGate) AddCard(customerId int) (models.Card, models.ApiError) {
 
 func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError) {
 
-	if amount <= 0 {
-		return -1, models.ConstructApiError(400, MESSAGE_INVALID_AMOUNT, "Authorise", float32(amount)/100)
-	}
-
 	_, apiErr := d.GetVendor(vendorId)
 
 	if apiErr != nil {

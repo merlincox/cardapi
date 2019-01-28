@@ -78,6 +78,7 @@ type Card struct {
 	Balance int `json:"balance"`
 	CustomerId int `json:"customeriId"`
 	Ts string `json:"ts"`
+	Movements []Movement `json:"movements,omitempty"`
 }
 
 type Authorisation struct {

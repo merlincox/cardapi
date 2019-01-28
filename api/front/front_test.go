@@ -10,16 +10,12 @@ import (
 	"github.com/merlincox/cardapi/models"
 )
 
-func makeFront() Front {
-	return NewFront(nil, models.Status{}, 123)
-}
-
 func TestUnknownRoute(t *testing.T) {
 
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
 
-	testFront := makeFront()
+	testFront := makeFront(t)
 
 	Convey("When sending an request with an unknown path", t, func() {
 
@@ -55,7 +51,7 @@ func TestFrontDummyData(t *testing.T) {
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
 
-	testFront := makeFront()
+	testFront := makeFront(t)
 
 	testFront.router = testFront.dummyDataRouter
 
@@ -94,7 +90,7 @@ func TestFrontErrorData(t *testing.T) {
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
 
-	testFront := makeFront()
+	testFront := makeFront(t)
 
 	testFront.router = testFront.errorRouter
 
@@ -132,7 +128,7 @@ func TestFrontUnparseableData(t *testing.T) {
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
 
-	testFront := makeFront()
+	testFront := makeFront(t)
 
 	testFront.router = testFront.unmarshallableRouter
 
@@ -171,7 +167,7 @@ func TestFrontPanicRecovery(t *testing.T) {
 	mockController := gomock.NewController(t)
 	defer mockController.Finish()
 
-	testFront := makeFront()
+	testFront := makeFront(t)
 
 	testFront.router = testFront.panickyRouter
 

@@ -11,21 +11,28 @@ import (
 
 	"github.com/merlincox/cardapi/models"
 	"github.com/merlincox/cardapi/utils"
+	"github.com/merlincox/cardapi/mocks"
 )
 
-var testFront = NewFront(nil, models.Status{
-	Branch:    "testing",
-	Platform:  "test",
-	Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-	Release:   "v1.0.1",
-	Timestamp: "2019-01-02T14:52:36.951375973Z",
-}, 123)
+func makeFront(t *testing.T) Front {
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	return NewFront(mockDbi,models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+}
 
 func TestStatusRoute(t *testing.T) {
 
-	mockController := gomock.NewController(t)
-	defer mockController.Finish()
+	testFront := makeFront(t)
 
 	expected := models.Status{
 		Branch:    "testing",
@@ -57,8 +64,7 @@ func TestStatusRoute(t *testing.T) {
 
 func testCalc(t *testing.T, val1, val2 float64, locale, result, op, fullop string) {
 
-	mockController := gomock.NewController(t)
-	defer mockController.Finish()
+	testFront := makeFront(t)
 
 	expected := models.CalculationResult{
 		Locale: locale,
@@ -138,8 +144,7 @@ func TestCalcRouteRootEn(t *testing.T) {
 
 func testCalcRouteBad(t *testing.T, val1, val2 float64, op, context, msg string) {
 
-	mockController := gomock.NewController(t)
-	defer mockController.Finish()
+	testFront := makeFront(t)
 
 	expected := models.ApiErrorBody{
 		Message: msg,
@@ -192,4 +197,4 @@ func TestCalcRouteNaN(t *testing.T) {
 	testCalcRouteBad(t, -1,2, "root", "When sending a request to the /calc route with NaN result", "Out of limits: -1 root 2")
 }
 
-//@TODO mock the dbi and write tests for card API routes
+//@TODO write tests for card API routes

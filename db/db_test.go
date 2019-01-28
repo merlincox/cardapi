@@ -256,17 +256,6 @@ func TestAuthoriseOK(t *testing.T) {
 	})
 }
 
-func TestAuthoriseBadAmount(t *testing.T) {
-	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
-
-		aid, apiErr := dbi.Authorise(100001, 1001, 0, "Coffee")
-
-		utils.AssertEquals(t, "Return status for calling Authorise with an invalid amount", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling Authorise with an invalid amount £0.00", fmt.Sprintf(MESSAGE_INVALID_AMOUNT, "Authorise", float32(0)), apiErr.Error())
-		utils.AssertEquals(t, "Return status for calling Authorise with an invalid amount", -1, aid)
-	})
-}
-
 func TestAuthoriseBadVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
