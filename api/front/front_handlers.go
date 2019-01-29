@@ -10,7 +10,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/aws/aws-lambda-go/events"
-
+	
 	"github.com/merlincox/cardapi/models"
 )
 
@@ -20,6 +20,45 @@ func (front Front) statusHandler(request events.APIGatewayProxyRequest) (interfa
 }
 
 type codeRequestHandler func(request models.CodeRequest) (int, models.ApiError)
+
+func (front Front) addCustomerHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	c := models.Customer{}
+
+	err := json.Unmarshal([]byte(request.Body), &c)
+
+	if err != nil {
+		return nil, models.ErrorWrap(err)
+	}
+
+	return front.dbi.AddCustomer(c.Fullname)
+}
+
+func (front Front) addCardHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	c := models.Customer{}
+
+	err := json.Unmarshal([]byte(request.Body), &c)
+
+	if err != nil {
+		return nil, models.ErrorWrap(err)
+	}
+
+	return front.dbi.AddCard(c.Id)
+}
+
+func (front Front) addVendorHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	c := models.Vendor{}
+
+	err := json.Unmarshal([]byte(request.Body), &c)
+
+	if err != nil {
+		return nil, models.ErrorWrap(err)
+	}
+
+	return front.dbi.AddVendor(c.VendorName)
+}
 
 func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 
@@ -61,13 +100,13 @@ func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (in
 	}
 
 	return models.CodeResponse{
-		Id:          id,
+		Id: id,
 	}, nil
 }
 
 func (front Front) authoriseHandler(cr models.CodeRequest) (int, models.ApiError) {
 
-	if cr.VendorId < 1 || cr.CardId  < 1 || cr.Amount < 1 || cr.Description == "" {
+	if cr.VendorId < 1 || cr.CardId < 1 || cr.Amount < 1 || cr.Description == "" {
 		return -1, models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
 	}
 
@@ -111,16 +150,16 @@ func (front Front) topUpHandler(cr models.CodeRequest) (int, models.ApiError) {
 }
 
 func (front Front) getCardHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
-	
+
 	ids := request.PathParameters["id"]
 
 	id, err := strconv.ParseInt(ids, 0, 0)
-	
-	if  err != nil {
+
+	if err != nil {
 		return -1, models.ConstructApiError(400, "getCard: malformed id: %v", ids)
-		
+
 	}
-	
+
 	return front.dbi.GetCard(int(id))
 }
 
@@ -130,7 +169,7 @@ func (front Front) getVendorHandler(request events.APIGatewayProxyRequest) (inte
 
 	id, err := strconv.ParseInt(ids, 0, 0)
 
-	if  err != nil {
+	if err != nil {
 		return -1, models.ConstructApiError(400, "getVendor: malformed id: %v", ids)
 
 	}
@@ -139,15 +178,15 @@ func (front Front) getVendorHandler(request events.APIGatewayProxyRequest) (inte
 }
 
 func (front Front) getVendorsHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
-	
+
 	//for now, offset and limit are ignored
-	
+
 	vendors, err := front.dbi.GetVendors()
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return models.VendorList{
 		Items:  vendors,
 		Offset: 0,
@@ -178,7 +217,7 @@ func (front Front) getCustomerHandler(request events.APIGatewayProxyRequest) (in
 
 	id, err := strconv.ParseInt(ids, 0, 0)
 
-	if  err != nil {
+	if err != nil {
 		return -1, models.ConstructApiError(400, "getCustomer: malformed id: %v", ids)
 
 	}
@@ -192,7 +231,7 @@ func (front Front) getAuthorisationHandler(request events.APIGatewayProxyRequest
 
 	id, err := strconv.ParseInt(ids, 0, 0)
 
-	if  err != nil {
+	if err != nil {
 		return -1, models.ConstructApiError(400, "getAuthorisation: malformed id: %v", ids)
 
 	}

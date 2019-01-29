@@ -82,6 +82,15 @@ func (front *Front) getHandlerForRoute(route string) innerHandler {
 		"POST/capture":
 		return front.codeRequestHandler
 
+	case "POST/card":
+		return front.addCardHandler
+
+	case "POST/customer":
+		return front.addCustomerHandler
+
+	case "POST/vendor":
+		return front.addVendorHandler
+
 	case "GET/card/{id}":
 		return front.getCardHandler
 
