@@ -175,6 +175,7 @@ aws cloudformation package \
 aws cloudformation deploy \
        --template-file $package_yml \
        --stack-name $cf_stack \
+       --s3-bucket $cf_bucket \
        --capabilities CAPABILITY_IAM \
        --parameter-overrides Platform="${platform}" Commit="${git_commit}" \
            CustomDomain="${custom_domain}" HostedZone="${domain_zone_id}" \
