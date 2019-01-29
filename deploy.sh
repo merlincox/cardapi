@@ -86,7 +86,7 @@ if [[ -z "${certificate_arn}" ]]; then
     fi
 fi
 
-git_tag="untagged"
+git_tag="0.0.0_untagged"
 
 if git describe --tags >/dev/null 2>/dev/null; then
    git_tag=$(git describe --tags)

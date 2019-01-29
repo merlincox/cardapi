@@ -132,7 +132,7 @@ Resources:
       DefinitionBody:
         swagger: "2.0"
         info:
-          version: !Sub ${Platform}
+          version: !Sub ${Release}
           title:  !Sub Sample-API-${Platform}
           description: Sample API
         schemes:
@@ -226,6 +226,11 @@ Resources:
              options:
                produces:
                - "application/json"
+               parameters:
+               - name: "op"
+                 in: "path"
+                 required: true
+                 type: "string"
                responses:
                  '200':
                    description: "200 response"
@@ -298,6 +303,11 @@ Resources:
              options:
                produces:
                - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
                responses:
                  '200':
                    description: "200 response"
@@ -370,6 +380,11 @@ Resources:
              options:
                produces:
                - "application/json"
+               parameters:
+               - name: "op"
+                 in: "path"
+                 required: true
+                 type: "string"
                responses:
                  '200':
                    description: "200 response"
@@ -432,6 +447,11 @@ Resources:
              options:
                produces:
                - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
                responses:
                  '200':
                    description: "200 response"
@@ -638,6 +658,11 @@ Resources:
              options:
                produces:
                - "application/json"
+               parameters:
+               - name: "id"
+                 in: "path"
+                 required: true
+                 type: "string"
                responses:
                  '200':
                    description: "200 response"
