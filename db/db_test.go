@@ -8,10 +8,32 @@ import (
 
 	"github.com/merlincox/cardapi/utils"
 	"github.com/go-sql-driver/mysql"
+	"strings"
+)
+
+var (
+	// RE special chars which may occur in queries
+	reSpecial = []string {
+		"?",
+		".",
+		"(",
+		")",
+		"+",
+	}
 )
 
 func badIdMessage(methodName, objectName string, id int) string {
 	return fmt.Sprintf(MESSAGE_BAD_ID, methodName, objectName, id)
+}
+
+//NB ExpectPrepare takes regular expressions, so query constants may need to be escaped
+func esc(src string) string {
+
+	for _, s := range reSpecial {
+		src = strings.Replace(src, s, "\\" + s, -1)
+	}
+
+	return src
 }
 
 func testWrapper(t *testing.T, callback func(*testing.T, sqlmock.Sqlmock, Dbi)) {
@@ -32,7 +54,7 @@ func TestGetVendors(t *testing.T) {
 			AddRow(int64(1001), "a shop", 1234).
 			AddRow(int64(2002), "a pub", 999)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDORS).ExpectQuery().WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDORS)).ExpectQuery().WillReturnRows(expected)
 
 		vs, apiErr := dbi.GetVendors()
 
@@ -51,7 +73,7 @@ func TestGetCustomers(t *testing.T) {
 			AddRow(int64(1001), "Fred Bloggs").
 			AddRow(int64(2002), "Jane Doe")
 
-		expecter.ExpectPrepare(QUERY_GET_CUSTOMERS).ExpectQuery().WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CUSTOMERS)).ExpectQuery().WillReturnRows(expected)
 
 		vs, apiErr := dbi.GetCustomers()
 
@@ -65,90 +87,93 @@ func TestGetCustomers(t *testing.T) {
 func TestGetCustomer(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"}).
-			AddRow(int64(1001), "Fred Bloggs")
+		//cu.id, cu.fullname, c.id, c.balance, c.available
+		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available"}).
+			AddRow(int64(1001), "Fred Bloggs", 1001, 456, 0)
 
-		expecter.ExpectPrepare(QUERY_GET_CUSTOMER).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CUSTOMER_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		v, apiErr := dbi.GetCustomer(1001)
 
-		utils.AssertNoError(t, "Calling GetCustomer", apiErr)
-		utils.AssertEquals(t, "VendorName for GetCustomer result", "Fred Bloggs", v.Fullname)
-		utils.AssertEquals(t, "Id for GetCustomer result", 1001, v.Id)
+		utils.AssertNoError(t, "Calling getCustomer", apiErr)
+		utils.AssertEquals(t, "Fullname for getCustomer result", "Fred Bloggs", v.Fullname)
+		utils.AssertEquals(t, "Id for getCustomer result", 1001, v.Id)
 	})
 }
 
 func TestGetCustomerNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "fullname"})
+		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available"})
 
-		expecter.ExpectPrepare(QUERY_GET_CUSTOMER).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CUSTOMER_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		_, apiErr := dbi.GetCustomer(1001)
 
-		utils.AssertEquals(t, "Return status for calling GetCustomer with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetCustomer with bad id 1001", badIdMessage("GetCustomer", "customer", 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return status for calling getCustomer with a bad id", 404, apiErr.StatusCode())
+		utils.AssertEquals(t, "Return message for calling getCustomer with bad id 1001", badIdMessage("getCustomer", "customer", 1001), apiErr.Error())
 	})
 }
 
 func TestGetVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
-			AddRow(int64(1001), "Coffee Shop", 0)
+		//v.id, v.vendor_name, v.balance, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded
+		expected := sqlmock.NewRows([]string{"v.id", "v.vendor_name", "v.balance", "a.amount", "a.card_id", "a.description", "a.captured", "a.reversed", "a.refunded"}).
+			AddRow(int64(1001), "Coffee Shop", 0, 99, 1001, "Cake", 0, 0, 0)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		v, apiErr := dbi.GetVendor(1001)
 
-		utils.AssertNoError(t, "Calling GetVendor", apiErr)
-		utils.AssertEquals(t, "VendorName for GetVendor result", "Coffee Shop", v.VendorName)
-		utils.AssertEquals(t, "Id for GetVendor result", 1001, v.Id)
+		utils.AssertNoError(t, "Calling getVendor", apiErr)
+		utils.AssertEquals(t, "VendorName for getVendor result", "Coffee Shop", v.VendorName)
+		utils.AssertEquals(t, "Id for getVendor result", 1001, v.Id)
 	})
 }
 
 func TestGetVendorNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"})
+		expected := sqlmock.NewRows([]string{"v.id", "v.vendor_name", "v.balance", "a.amount", "a.card_id", "a.description", "a.captured", "a.reversed", "a.refunded"})
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		_, apiErr := dbi.GetVendor(1001)
 
-		utils.AssertEquals(t, "Return status for calling GetVendor with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetVendor with bad id 1001", badIdMessage("GetVendor", "vendor", 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return status for calling getVendor with a bad id", 404, apiErr.StatusCode())
+		utils.AssertEquals(t, "Return message for calling getVendor with bad id 1001", badIdMessage("getVendor", "vendor", 1001), apiErr.Error())
 	})
 }
 
 func TestGetCard(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
-			AddRow(int64(1001), 12676, 12089, "2019-01-24 01:00:10")
+		//  c.id, c.balance, c.available, c.ts, m.amount, m.description, m.movement_type, m.ts
+		expected := sqlmock.NewRows([]string{"c.id", "c.balance", "c.available", "c.tc",  "m.amount", "m.description", "m.movement_type", "m.ts"}).
+			AddRow(int64(1001), 12676, 12089, "2019-01-24 01:00:10", 95, "cake", "PURCHASE", "2019-01-24 01:00:10")
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		v, apiErr := dbi.GetCard(1001)
 
-		utils.AssertNoError(t, "Calling GetCard", apiErr)
-		utils.AssertEquals(t, "Balance for GetCard result", 12676, v.Balance)
-		utils.AssertEquals(t, "Available for GetCard result", 12089, v.Available)
+		utils.AssertNoError(t, "Calling getCard", apiErr)
+		utils.AssertEquals(t, "Balance for getCard result", 12676, v.Balance)
+		utils.AssertEquals(t, "Available for getCard result", 12089, v.Available)
 	})
 }
 
 func TestGetCardNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"id", "balance", "available", "tc"})
+		expected := sqlmock.NewRows([]string{"c.id", "c.balance", "c.available", "c.tc",  "m.amount", "m.description", "m.movement_type", "m.ts"})
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		_, apiErr := dbi.GetCard(1001)
 
-		utils.AssertEquals(t, "Return status for calling GetCard with a bad id", 404, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling GetCard with bad id 1001", badIdMessage("GetCard", "card", 1001), apiErr.Error())
+		utils.AssertEquals(t, "Return status for calling getCard with a bad id", 404, apiErr.StatusCode())
+		utils.AssertEquals(t, "Return message for calling getCard with bad id 1001", badIdMessage("getCard", "card", 1001), apiErr.Error())
 	})
 }
 
@@ -157,8 +182,7 @@ func TestAddVendor(t *testing.T) {
 
 		expected := sqlmock.NewResult(1001, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_VENDOR + "]").ExpectExec().WithArgs("coffee shop").WillReturnResult(expected)
+		expecter.ExpectPrepare(esc(QUERY_ADD_VENDOR)).ExpectExec().WithArgs("coffee shop").WillReturnResult(expected)
 
 		v, apiErr := dbi.AddVendor("coffee shop")
 
@@ -173,8 +197,7 @@ func TestAddCustomer(t *testing.T) {
 
 		expected := sqlmock.NewResult(1001, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_CUSTOMER + "]").ExpectExec().WithArgs("Fred Bloggs").WillReturnResult(expected)
+		expecter.ExpectPrepare(esc(QUERY_ADD_CUSTOMER )).ExpectExec().WithArgs("Fred Bloggs").WillReturnResult(expected)
 
 		v, apiErr := dbi.AddCustomer("Fred Bloggs")
 
@@ -189,8 +212,7 @@ func TestAddCardOK(t *testing.T) {
 
 		expected := sqlmock.NewResult(1001, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_CARD + "]").ExpectExec().WithArgs(1099).WillReturnResult(expected)
+		expecter.ExpectPrepare(esc(QUERY_ADD_CARD )).ExpectExec().WithArgs(1099).WillReturnResult(expected)
 
 		c, apiErr := dbi.AddCard(1099)
 
@@ -208,8 +230,7 @@ func TestAddCardNotFound(t *testing.T) {
 			Message: "(Foreign key violation)",
 		}
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_CARD + "]").ExpectExec().WithArgs(1099).WillReturnError(err)
+		expecter.ExpectPrepare(esc(QUERY_ADD_CARD )).ExpectExec().WithArgs(1099).WillReturnError(err)
 
 		_, apiErr := dbi.AddCard(1099)
 
@@ -224,27 +245,25 @@ func TestAuthoriseOK(t *testing.T) {
 		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
 			AddRow(int64(1001), "Coffee Shop", 999)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		expected = sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
 			AddRow(int64(100001), 12676, 12089, "2019-01-24 01:00:10")
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		expecter.ExpectBegin()
 
 		expectedR := sqlmock.NewResult(0, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_AUTHORISE + "]")
+		expecter.ExpectPrepare(esc(QUERY_AUTHORISE ))
 		// This duplication seems to be necessary for tx.Stmt(..)
-		expecter.ExpectPrepare("[" + QUERY_AUTHORISE + "]").ExpectExec().WithArgs(210, 100001, 210).WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_AUTHORISE )).ExpectExec().WithArgs(210, 100001, 210).WillReturnResult(expectedR)
 
 		expectedR = sqlmock.NewResult(1009, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_AUTHORISATION + "]")
-		expecter.ExpectPrepare("[" + QUERY_ADD_AUTHORISATION + "]").ExpectExec().WithArgs(100001, 1001, 210, "Coffee").WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_ADD_AUTHORISATION ))
+		expecter.ExpectPrepare(esc(QUERY_ADD_AUTHORISATION )).ExpectExec().WithArgs(100001, 1001, 210, "Coffee").WillReturnResult(expectedR)
 
 		expecter.ExpectCommit()
 
@@ -261,7 +280,7 @@ func TestAuthoriseBadVendor(t *testing.T) {
 
 		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"})
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
@@ -277,11 +296,11 @@ func TestAuthoriseBadCard(t *testing.T) {
 		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
 			AddRow(int64(1001), "Coffee Shop", 999)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		expected = sqlmock.NewRows([]string{"id", "balance", "available", "tc"})
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
@@ -297,12 +316,12 @@ func TestAuthoriseInsufficientFunds(t *testing.T) {
 		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
 			AddRow(int64(1001), "Coffee Shop", 999)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		expected = sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
 			AddRow(int64(100001), 12676, 0, "2019-01-24 01:00:10")
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Authorise(100001, 1001, 210, "Coffee")
 
@@ -319,21 +338,20 @@ func TestAuthoriseInsufficientFunds2(t *testing.T) {
 		expected := sqlmock.NewRows([]string{"id", "vendor_name", "balance"}).
 			AddRow(int64(1001), "Coffee Shop", 999)
 
-		expecter.ExpectPrepare(QUERY_GET_VENDOR).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
 		expected = sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
 			AddRow(int64(100001), 12676, 211, "2019-01-24 01:00:10")
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		expecter.ExpectBegin()
 
 		expectedR := sqlmock.NewResult(0, 0)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_AUTHORISE + "]")
+		expecter.ExpectPrepare(esc(QUERY_AUTHORISE ))
 		// This duplication seems to be necessary for tx.Stmt(..)
-		expecter.ExpectPrepare("[" + QUERY_AUTHORISE + "]").ExpectExec().WithArgs(210, 100001, 210).WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_AUTHORISE )).ExpectExec().WithArgs(210, 100001, 210).WillReturnResult(expectedR)
 
 		expecter.ExpectRollback()
 
@@ -351,22 +369,20 @@ func TestTopUpOK(t *testing.T) {
 		expected := sqlmock.NewRows([]string{"id", "balance", "available", "tc"}).
 			AddRow(int64(100001), 12676, 12089, "2019-01-24 01:00:10")
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		expecter.ExpectBegin()
 
 		expectedR := sqlmock.NewResult(0, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_UPDATE_CARD + "]")
+		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD ))
 		// This duplication seems to be necessary for tx.Stmt(..)
-		expecter.ExpectPrepare("[" + QUERY_UPDATE_CARD + "]").ExpectExec().WithArgs(2000, 2000, 100001).WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD )).ExpectExec().WithArgs(2000, 2000, 100001).WillReturnResult(expectedR)
 
 		expectedR = sqlmock.NewResult(1009, 1)
 
-		// Not sure why square brackets are needed here..
-		expecter.ExpectPrepare("[" + QUERY_ADD_MOVEMENT + "]")
-		expecter.ExpectPrepare("[" + QUERY_ADD_MOVEMENT + "]").ExpectExec().WithArgs(100001, 2000, "Transfer from Bank", "TOP-UP").WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_ADD_MOVEMENT ))
+		expecter.ExpectPrepare(esc(QUERY_ADD_MOVEMENT )).ExpectExec().WithArgs(100001, 2000, "Transfer from Bank", "TOP-UP").WillReturnResult(expectedR)
 
 		expecter.ExpectCommit()
 
@@ -394,7 +410,7 @@ func TestTopUpBadCard(t *testing.T) {
 
 		expected := sqlmock.NewRows([]string{"id", "balance", "available", "tc"})
 
-		expecter.ExpectPrepare(QUERY_GET_CARD).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
+		expecter.ExpectPrepare(esc(QUERY_GET_CARD)).ExpectQuery().WithArgs(100001).WillReturnRows(expected)
 
 		aid, apiErr := dbi.TopUp(100001, 2000, "Transfer from Bank")
 
