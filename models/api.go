@@ -66,6 +66,13 @@ type Customer struct {
 	Id       int    `json:"id"`
 }
 
+// CustomerList: A list of customers
+type CustomerList struct {
+	Items  []Customer `json:"items"`
+	Offset int        `json:"offset"`
+	Total  int        `json:"total"`
+}
+
 // Empty: (No description)
 type Empty struct {
 }
@@ -95,4 +102,11 @@ type Vendor struct {
 	Balance        int             `json:"balance,omitempty"`
 	Id             int             `json:"id"`
 	VendorName     string          `json:"vendorName"`
+}
+
+// VendorList: A list of vendors
+type VendorList struct {
+	Items  []Vendor `json:"items"`
+	Offset int      `json:"offset"`
+	Total  int      `json:"total"`
 }
