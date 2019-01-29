@@ -458,6 +458,140 @@ Resources:
                  requestTemplates:
                    application/json: "{\"statusCode\": 200}"
                  type: "mock"
+          /customers:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "limit"
+                 in: "query"
+                 required: false
+                 type: "string"
+               - name: "offset"
+                 in: "query"
+                 required: false
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/CustomerList"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.querystring.limit"
+                 - "method.request.querystring.offset"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
+          /vendors:
+             get:
+               produces:
+               - "application/json"
+               parameters:
+               - name: "limit"
+                 in: "query"
+                 required: false
+                 type: "string"
+               - name: "offset"
+                 in: "query"
+                 required: false
+                 type: "string"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/VendorList"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 uri:
+                   !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambdaFunction.Arn}/invocations"
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 httpMethod: "POST"
+                 cacheKeyParameters:
+                 - "method.request.querystring.limit"
+                 - "method.request.querystring.offset"
+                 contentHandling: "CONVERT_TO_TEXT"
+                 type: "aws_proxy"
+             options:
+               produces:
+               - "application/json"
+               responses:
+                 '200':
+                   description: "200 response"
+                   schema:
+                     $ref: "#/definitions/Empty"
+                   headers:
+                     Cache-Control:
+                       type: "string"
+                     Access-Control-Allow-Origin:
+                       type: "string"
+                     Access-Control-Allow-Methods:
+                       type: "string"
+                     Access-Control-Allow-Headers:
+                       type: "string"
+               x-amazon-apigateway-integration:
+                 responses:
+                   default:
+                     statusCode: "200"
+                     responseParameters:
+                       method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+                       method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-Audience,x-audience'"
+                       method.response.header.Access-Control-Allow-Origin: "'*'"
+                 passthroughBehavior: "when_no_match"
+                 requestTemplates:
+                   application/json: "{\"statusCode\": 200}"
+                 type: "mock"
           /vendor/{id}:
              get:
                produces:
@@ -1056,3 +1190,39 @@ Resources:
               id:
                 type: "integer"
             description: "Response to a request for a code"
+          CustomerList:
+            type: "object"
+            required:
+            - "items"
+            - "offset"
+            - "total"
+            properties:
+              offset:
+                type: "integer"
+              total:
+                type: "integer"
+                description: "total for all items, ignoring offset and limit"
+              items:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Customer"
+            title: "CustomerList"
+            description: "A list of customers"
+          VendorList:
+            type: "object"
+            required:
+            - "items"
+            - "offset"
+            - "total"
+            properties:
+              offset:
+                type: "integer"
+              total:
+                type: "integer"
+                description: "total for all items, ignoring offset and limit"
+              items:
+                type: "array"
+                items:
+                  $ref: "#/definitions/Vendor"
+            title: "VendorList"
+            description: "A list of vendors"
