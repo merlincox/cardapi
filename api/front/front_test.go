@@ -182,7 +182,7 @@ func TestFrontPanicRecovery(t *testing.T) {
 
 		Convey("Then front should return a 500 request status code and a JSON encoded error body with the panic message", func() {
 			response, err := testFront.Handler(request)
-			So(response.Body, ShouldEqual, `{"message":"Simulated panic","code":500}`)
+			So(response.Body, ShouldEqual, `{"message":"Panic: Simulated panic","code":500}`)
 			So(response.Headers["Access-Control-Allow-Origin"], ShouldEqual, "*")
 			So(response.StatusCode, ShouldEqual, 500)
 			So(err, ShouldBeNil)

@@ -47,12 +47,14 @@ func NewFront(dbi db.Dbi, status models.Status, cacheMaxAge int) Front {
 // Any panic should be recovered and wrapped into an ApiErrorBody, and the trace logged
 func (front Front) Handler(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
 
+	useCache := request.RequestContext.HTTPMethod == "GET"
+
 	defer func() {
 
 		if r := recover(); r != nil {
 			log.Println(utils.JsonStack(r, debug.Stack()))
-			apiErr := models.ConstructApiError(http.StatusInternalServerError, "%v", r)
-			response = front.buildResponse(nil, apiErr)
+			apiErr := models.ConstructApiError(http.StatusInternalServerError, "Panic: %v", r)
+			response = front.buildResponse(nil, apiErr, useCache)
 		}
 
 	}()
@@ -60,7 +62,8 @@ func (front Front) Handler(request events.APIGatewayProxyRequest) (response even
 	route := getRoute(request)
 	log.Println("Handling a request for %v.", route)
 
-	response = front.buildResponse(front.router(route)(request))
+	data, apiErr := front.router(route)(request)
+	response = front.buildResponse(data, apiErr, useCache)
 
 	return
 }
@@ -125,11 +128,7 @@ func (front Front) unknownRouteHandler(request events.APIGatewayProxyRequest) (i
 	return nil, models.ConstructApiError(http.StatusNotFound, "No such route as %v", getRoute(request))
 }
 
-func (front *Front) seoString(s string) string {
-	return utils.Slug(s)
-}
-
-func (front *Front) buildResponse(data interface{}, err models.ApiError) events.APIGatewayProxyResponse {
+func (front *Front) buildResponse(data interface{}, err models.ApiError, useCache bool) events.APIGatewayProxyResponse {
 
 	var (
 		body       string
@@ -155,11 +154,17 @@ func (front *Front) buildResponse(data interface{}, err models.ApiError) events.
 		log.Printf("ERROR: Returning %v: %v", statusCode, "Unmarshallable data")
 	}
 
+	cacheValue := "no-cache"
+
+	if useCache {
+		cacheValue = "max-age=" + strconv.Itoa(front.cacheMaxAge)
+	}
+
 	return events.APIGatewayProxyResponse{
 		Body:       body,
 		StatusCode: statusCode,
 		Headers: map[string]string{
-			"Cache-Control":               "max-age=" + strconv.Itoa(front.cacheMaxAge),
+			"Cache-Control":               cacheValue,
 			"Access-Control-Allow-Origin": "*",
 			"X-Timestamp":                 time.Now().UTC().Format(time.RFC3339Nano),
 		}}
