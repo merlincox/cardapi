@@ -94,6 +94,13 @@ func (front *Front) getHandlerForRoute(route string) innerHandler {
 	case "GET/authorisation/{id}":
 		return front.getAuthorisationHandler
 
+	case "GET/vendors":
+		return front.getVendorsHandler
+
+	case "GET/customers":
+		return front.getCustomersHandler
+
+
 	}
 
 	return front.unknownRouteHandler

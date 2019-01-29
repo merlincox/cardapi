@@ -138,6 +138,40 @@ func (front Front) getVendorHandler(request events.APIGatewayProxyRequest) (inte
 	return front.dbi.GetVendor(int(id))
 }
 
+func (front Front) getVendorsHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+	
+	//for now, offset and limit are ignored
+	
+	vendors, err := front.dbi.GetVendors()
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return models.VendorList{
+		Items:  vendors,
+		Offset: 0,
+		Total:  len(vendors),
+	}, nil
+}
+
+func (front Front) getCustomersHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	//for now, offset and limit are ignored
+
+	customers, err := front.dbi.GetCustomers()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return models.CustomerList{
+		Items:  customers,
+		Offset: 0,
+		Total:  len(customers),
+	}, nil
+}
+
 func (front Front) getCustomerHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 
 	ids := request.PathParameters["id"]
