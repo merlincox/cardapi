@@ -108,6 +108,19 @@ func (mr *MockDbiMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockDbi)(nil).Close))
 }
 
+// GetAuthorisation mocks base method
+func (m *MockDbi) GetAuthorisation(arg0 int) (models.Authorisation, models.ApiError) {
+	ret := m.ctrl.Call(m, "GetAuthorisation", arg0)
+	ret0, _ := ret[0].(models.Authorisation)
+	ret1, _ := ret[1].(models.ApiError)
+	return ret0, ret1
+}
+
+// GetAuthorisation indicates an expected call of GetAuthorisation
+func (mr *MockDbiMockRecorder) GetAuthorisation(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAuthorisation", reflect.TypeOf((*MockDbi)(nil).GetAuthorisation), arg0)
+}
+
 // GetCard mocks base method
 func (m *MockDbi) GetCard(arg0 int) (models.Card, models.ApiError) {
 	ret := m.ctrl.Call(m, "GetCard", arg0)
@@ -171,18 +184,6 @@ func (m *MockDbi) GetVendors() ([]models.Vendor, models.ApiError) {
 // GetVendors indicates an expected call of GetVendors
 func (mr *MockDbiMockRecorder) GetVendors() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVendors", reflect.TypeOf((*MockDbi)(nil).GetVendors))
-}
-
-// Ping mocks base method
-func (m *MockDbi) Ping() models.ApiError {
-	ret := m.ctrl.Call(m, "Ping")
-	ret0, _ := ret[0].(models.ApiError)
-	return ret0
-}
-
-// Ping indicates an expected call of Ping
-func (mr *MockDbiMockRecorder) Ping() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockDbi)(nil).Ping))
 }
 
 // Refund mocks base method
