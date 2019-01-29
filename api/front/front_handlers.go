@@ -117,7 +117,7 @@ func (front Front) getCardHandler(request events.APIGatewayProxyRequest) (interf
 	id, err := strconv.ParseInt(ids, 0, 0)
 	
 	if  err != nil {
-		return -1, models.ConstructApiError(400, "GetCard: malformed id: %v", ids)
+		return -1, models.ConstructApiError(400, "getCard: malformed id: %v", ids)
 		
 	}
 	
@@ -131,7 +131,7 @@ func (front Front) getVendorHandler(request events.APIGatewayProxyRequest) (inte
 	id, err := strconv.ParseInt(ids, 0, 0)
 
 	if  err != nil {
-		return -1, models.ConstructApiError(400, "GetVendor: malformed id: %v", ids)
+		return -1, models.ConstructApiError(400, "getVendor: malformed id: %v", ids)
 
 	}
 
@@ -145,11 +145,25 @@ func (front Front) getCustomerHandler(request events.APIGatewayProxyRequest) (in
 	id, err := strconv.ParseInt(ids, 0, 0)
 
 	if  err != nil {
-		return -1, models.ConstructApiError(400, "GetCustomer: malformed id: %v", ids)
+		return -1, models.ConstructApiError(400, "getCustomer: malformed id: %v", ids)
 
 	}
 
 	return front.dbi.GetCustomer(int(id))
+}
+
+func (front Front) getAuthorisationHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
+
+	ids := request.PathParameters["id"]
+
+	id, err := strconv.ParseInt(ids, 0, 0)
+
+	if  err != nil {
+		return -1, models.ConstructApiError(400, "getAuthorisation: malformed id: %v", ids)
+
+	}
+
+	return front.dbi.GetAuthorisation(int(id))
 }
 
 //left for backwards compatibility: please ignore
