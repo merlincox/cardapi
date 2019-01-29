@@ -381,7 +381,7 @@ Resources:
                produces:
                - "application/json"
                parameters:
-               - name: "op"
+               - name: "id"
                  in: "path"
                  required: true
                  type: "string"
