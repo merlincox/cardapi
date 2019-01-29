@@ -27,7 +27,7 @@ const (
                             WHERE c.id = ?
                             ORDER BY m.ts`
 
-	QUERY_GET_VENDOR_ALL = `SELECT v.id, v.vendor_name, v.balance, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded
+	QUERY_GET_VENDOR_ALL = `SELECT v.id, v.vendor_name, v.balance, a.id, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded, a.ts
                             FROM vendors v
                             LEFT OUTER JOIN authorisations a ON (a.vendor_id = v.id)
                             WHERE v.id = ?
@@ -341,8 +341,8 @@ func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 
 	for rows.Next() {
 
-		//v.id, v.vendor_name, v.balance, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded
-		err := rows.Scan(&v.Id, &v.VendorName, &v.Balance, &a.Amount, &a.CardId, &a.Description, &a.Captured, &a.Reversed, &a.Refunded)
+		//v.id, v.vendor_name, v.balance, a.id, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded, a.ts
+		err := rows.Scan(&v.Id, &v.VendorName, &v.Balance, &a.Amount, &a.Id, &a.CardId, &a.Description, &a.Captured, &a.Reversed, &a.Refunded, &a.Ts)
 
 		if err != nil {
 			return v, models.ErrorWrap(err)

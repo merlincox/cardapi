@@ -118,9 +118,9 @@ func TestGetCustomerNotFound(t *testing.T) {
 func TestGetVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		//v.id, v.vendor_name, v.balance, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded
-		expected := sqlmock.NewRows([]string{"v.id", "v.vendor_name", "v.balance", "a.amount", "a.card_id", "a.description", "a.captured", "a.reversed", "a.refunded"}).
-			AddRow(int64(1001), "Coffee Shop", 0, 99, 1001, "Cake", 0, 0, 0)
+		//v.id, v.vendor_name, v.balance, a.id, a.amount, a.card_id, a.description, a.captured, a.reversed, a.refunded, a.ts
+		expected := sqlmock.NewRows([]string{"v.id", "v.vendor_name", "v.balance", "a.id", "a.amount", "a.card_id", "a.description", "a.captured", "a.reversed", "a.refunded", "a.ts"}).
+			AddRow(int64(1001), "Coffee Shop", 0, 99, 1001, 10001, "Cake", 0, 0, 0, "2019-01-24 01:00:10")
 
 		expecter.ExpectPrepare(esc(QUERY_GET_VENDOR_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
