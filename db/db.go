@@ -33,7 +33,7 @@ const (
                             WHERE v.id = ?
                             ORDER BY a.ts`
 
-	QUERY_GET_CUSTOMER_ALL = `SELECT cu.id, cu.fullname, c.id, c.balance, c.available
+	QUERY_GET_CUSTOMER_ALL = `SELECT cu.id, cu.fullname, c.id, c.balance, c.available, c.ts
                             FROM customers cu
                             LEFT OUTER JOIN cards c ON (c.customer_id = cu.id)
                             WHERE cu.id = ?
@@ -292,14 +292,15 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 
 	for rows.Next() {
 
-		//cu.id, cu.fullname, c.id, c.balance, c.available
-		err := rows.Scan(&cu.Id, &cu.Fullname, &c.Id, &c.Balance, &c.Available)
+		//cu.id, cu.fullname, c.id, c.balance, c.available, c.ts
+		err := rows.Scan(&cu.Id, &cu.Fullname, &c.Id, &c.Balance, &c.Available, &c.Ts)
 
 		if err != nil {
 			return cu, models.ErrorWrap(err)
 		}
 
 		if c.Valid() {
+			c.CustomerId.Int64 = int64(id)
 			cu.Cards = append(cu.Cards, c.Card())
 		}
 	}
@@ -349,6 +350,7 @@ func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 		}
 
 		if a.Valid() {
+			a.VendorId.Int64 = int64(id)
 			v.Authorisations = append(v.Authorisations, a.Authorisation())
 		}
 	}
@@ -449,6 +451,7 @@ func (d *dbGate) GetAuthorisation(id int) (models.Authorisation, models.ApiError
 		}
 
 		if m.Valid() {
+			m.ParentId.Int64 = int64(id)
 			a.Movements = append(a.Movements, m.AuthMovement())
 		}
 	}
@@ -524,6 +527,7 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 		}
 
 		if m.Valid() {
+			m.ParentId.Int64 = int64(id)
 			c.Movements = append(c.Movements, m.Movement())
 		}
 	}

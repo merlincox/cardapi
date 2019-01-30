@@ -87,9 +87,9 @@ func TestGetCustomers(t *testing.T) {
 func TestGetCustomer(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		//cu.id, cu.fullname, c.id, c.balance, c.available
-		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available"}).
-			AddRow(int64(1001), "Fred Bloggs", 1001, 456, 0)
+		//cu.id, cu.fullname, c.id, c.balance, c.available, c.ts
+		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available", "c.ts"}).
+			AddRow(int64(1001), "Fred Bloggs", 1001, 456, 0, "2019-01-24 01:00:10")
 
 		expecter.ExpectPrepare(esc(QUERY_GET_CUSTOMER_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
@@ -104,7 +104,7 @@ func TestGetCustomer(t *testing.T) {
 func TestGetCustomerNotFound(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
-		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available"})
+		expected := sqlmock.NewRows([]string{"cu.id", "cu.fullname", "c.id", "c.balance", "c.available", "c.ts"})
 
 		expecter.ExpectPrepare(esc(QUERY_GET_CUSTOMER_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
