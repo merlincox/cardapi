@@ -134,12 +134,12 @@ func TestCalcRouteMultFr(t *testing.T) {
 }
 
 func TestCalcRoutePowEn(t *testing.T) {
-	testCalc(t, 2, 3, "en-GB","8", "pow", "power")
+	testCalc(t, 2, 3, "en-GB", "8", "pow", "power")
 }
 
 func TestCalcRouteRootEn(t *testing.T) {
 
-	testCalc(t, 16, 2, "en-GB","4", "roo", "root")
+	testCalc(t, 16, 2, "en-GB", "4", "roo", "root")
 }
 
 func testCalcRouteBad(t *testing.T, val1, val2 float64, op, context, msg string) {
@@ -182,19 +182,66 @@ func testCalcRouteBad(t *testing.T, val1, val2 float64, op, context, msg string)
 }
 
 func TestCalcRouteBadOp(t *testing.T) {
-	testCalcRouteBad(t, 1,2, "bad", "When sending a request to the /calc route with a bad operator", "Unknown calc operation: bad")
+	testCalcRouteBad(t, 1, 2, "bad", "When sending a request to the /calc route with a bad operator", "Unknown calc operation: bad")
 }
 
 func TestCalcRouteInf(t *testing.T) {
-	testCalcRouteBad(t, 1,0, "div", "When sending a request to the /calc route with inf result", "Out of limits: 1 divide 0")
+	testCalcRouteBad(t, 1, 0, "div", "When sending a request to the /calc route with inf result", "Out of limits: 1 divide 0")
 }
 
 func TestCalcRouteNegInf(t *testing.T) {
-	testCalcRouteBad(t, -1,0, "div", "When sending a request to the /calc route with negative inf result", "Out of limits: -1 divide 0")
+	testCalcRouteBad(t, -1, 0, "div", "When sending a request to the /calc route with negative inf result", "Out of limits: -1 divide 0")
 }
 
 func TestCalcRouteNaN(t *testing.T) {
-	testCalcRouteBad(t, -1,2, "root", "When sending a request to the /calc route with NaN result", "Out of limits: -1 root 2")
+	testCalcRouteBad(t, -1, 2, "root", "When sending a request to the /calc route with NaN result", "Out of limits: -1 root 2")
 }
 
-//@TODO write tests for card API routes
+func TestCustomersRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/customers`,
+			HTTPMethod:   `GET`,
+		},
+	}
+
+	c1 := models.Customer{
+		Fullname: "Fred Bloggs",
+		Id:       1001,
+	}
+
+	c2 := models.Customer{
+		Fullname: "Jane Doe",
+		Id:       1002,
+	}
+
+	cs := []models.Customer{c1, c2}
+
+	expected := models.CustomerList{
+		Items:  cs,
+		Offset: 0,
+		Total:  len(cs),
+	}
+
+	mockDbi.EXPECT().GetCustomers().Return(cs, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Response should match", response.Body, utils.JsonStringify(expected))
+}
+
+//@TODO write tests for other card API routes
