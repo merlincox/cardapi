@@ -151,6 +151,7 @@ Resources:
         paths:
           /status:
             get:
+              description: Get status data about the API, including the platform deployed to and the Git branch, release and commit deployed from
               produces:
               - "application/json"
               responses:
@@ -177,6 +178,7 @@ Resources:
                 type: "aws_proxy"
           /calc/{op}:
              get:
+               description: For backwards compatability only
                produces:
                - "application/json"
                parameters:
@@ -259,6 +261,7 @@ Resources:
                  type: "mock"
           /card/{id}:
              get:
+               description: Get data about a card identified by id, including movements such as top-ups, payments and refunds
                produces:
                - "application/json"
                parameters:
@@ -336,6 +339,7 @@ Resources:
                  type: "mock"
           /authorisation/{id}:
              get:
+               description: Get data about an authorisation identified by id, including movements such as captures, reversals and refunds
                produces:
                - "application/json"
                parameters:
@@ -413,6 +417,7 @@ Resources:
                  type: "mock"
           /customer/{id}:
              get:
+               description: Get data about customer by id, including cards held
                produces:
                - "application/json"
                parameters:
@@ -480,6 +485,7 @@ Resources:
                  type: "mock"
           /customers:
              get:
+               description: Get a list of customers
                produces:
                - "application/json"
                parameters:
@@ -547,6 +553,7 @@ Resources:
                  type: "mock"
           /vendors:
              get:
+               description: Get a list of vendors
                produces:
                - "application/json"
                parameters:
@@ -614,6 +621,7 @@ Resources:
                  type: "mock"
           /vendor/{id}:
              get:
+               description: Get data about a vendor identified by id, including authorisations
                produces:
                - "application/json"
                parameters:
@@ -691,7 +699,7 @@ Resources:
                  type: "mock"
           /authorise:
              post:
-               summary: Request an authorisation code
+               description: Request an authorisation code for a card payment, supplying vendor id, card id, amount and description in a code request object
                consumes:
                - "application/json"
                produces:
@@ -755,7 +763,7 @@ Resources:
                  type: "mock"
           /customer:
              post:
-               summary: Add a customer
+               description: Add a customer, supplying a customer record which is returned with an id
                consumes:
                - "application/json"
                produces:
@@ -819,7 +827,7 @@ Resources:
                  type: "mock"
           /vendor:
              post:
-               summary: Add a vendor
+               description: Add a vendor, supplying a vendor record which is returned with an id
                consumes:
                - "application/json"
                produces:
@@ -883,7 +891,7 @@ Resources:
                  type: "mock"
           /card:
              post:
-               summary: Add a card
+               description: Add a card, supplying a customer record. Returns a card record.
                consumes:
                - "application/json"
                produces:
@@ -947,7 +955,7 @@ Resources:
                  type: "mock"
           /capture:
              post:
-               summary: Request to capture all or part of an authorised payment
+               description: Request to capture all or part of an authorised payment supplying authorisation id and the amount to capture in a code request object
                consumes:
                - "application/json"
                produces:
@@ -1011,7 +1019,7 @@ Resources:
                  type: "mock"
           /reverse:
              post:
-               summary: Request to reverse all or part of a payment authorisation
+               description: Request to reverse all or part of a payment authorisation supplying authorisation id, the amount to reverse and description in a code request object
                consumes:
                - "application/json"
                produces:
@@ -1075,7 +1083,7 @@ Resources:
                  type: "mock"
           /top-up:
              post:
-               summary: Request to top-up a card
+               description: Request to top-up a card supplying card id and amount to top-up in a code request object
                consumes:
                - "application/json"
                produces:
@@ -1139,7 +1147,7 @@ Resources:
                  type: "mock"
           /refund:
              post:
-               summary: Request to refund all or part of a captured payment
+               description: Request to refund all or part of a payment authorisation, supplying authorisation id, the amount to refund and description in a code request object
                consumes:
                - "application/json"
                produces:
