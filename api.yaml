@@ -133,8 +133,8 @@ Resources:
         swagger: "2.0"
         info:
           version: !Sub ${Release}
-          title:  !Sub Sample-API-${Platform}
-          description: Sample API
+          title:  !Sub Card-API-${Platform}
+          description: Card API
         schemes:
         - "https"
         x-amazon-apigateway-gateway-responses:
