@@ -318,7 +318,6 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 	return cu, nil
 }
 
-
 // GetVendor gets vendor information, including associated authorisations
 func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 
@@ -544,7 +543,6 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 
 	return c, nil
 }
-
 
 func (d *dbGate) AddVendor(vendorName string) (models.Vendor, models.ApiError) {
 
