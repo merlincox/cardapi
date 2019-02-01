@@ -21,7 +21,7 @@ func makeFront(t *testing.T) Front {
 
 	mockDbi := mocks.NewMockDbi(mockCtrl)
 
-	return NewFront(mockDbi,models.Status{
+	return NewFront(mockDbi, models.Status{
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
@@ -241,7 +241,154 @@ func TestCustomersRoute(t *testing.T) {
 
 	response, _ := testFront.Handler(request)
 
-	utils.AssertEquals(t, "Response should match", response.Body, utils.JsonStringify(expected))
+	utils.AssertEquals(t, "Data from GetCustomers", response.Body, utils.JsonStringify(expected))
+	utils.AssertEquals(t, "Http code from GetCustomers", response.StatusCode, 200)
+}
+
+func TestGetCustomerRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/customer/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.Customer{
+		Fullname: "Fred Bloggs",
+		Id:       1001,
+	}
+
+	mockDbi.EXPECT().GetCustomer(1001).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCustomer", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetCustomer", 200, response.StatusCode)
+}
+
+func TestGetCustomerRoute404(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/customer/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.ConstructApiError(404, "GetCustomer: no customer with id: 1001")
+
+	mockDbi.EXPECT().GetCustomer(1001).Return(models.Customer{}, expected).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCustomer with invalid id", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetCustomer with invalid id", 404, response.StatusCode)
+}
+
+func TestGetCustomerRouteMalformedId(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/customer/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "badid",
+		},
+	}
+
+	expected := models.ConstructApiError(400, "GetCustomer: malformed id: badid")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCustomer", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetCustomer", 400, response.StatusCode)
+}
+
+func TestAddCustomerRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "v1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.Customer{
+		Fullname: "Joe Bloggs",
+	}
+
+	expected := models.Customer{
+		Fullname: "Joe Bloggs",
+		Id: 1001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/customer`,
+			HTTPMethod:   `POST`,
+		},
+		Body:            utils.JsonStringify(body),
+	}
+
+	mockDbi.EXPECT().AddCustomer(body.Fullname).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from AddCustomer", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetCustomer", 200, response.StatusCode)
 }
 
 //@TODO write tests for other card API routes
