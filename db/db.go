@@ -15,8 +15,6 @@ const (
 	QUERY_GET_CUSTOMERS     = "SELECT id, fullname FROM customers"
 	QUERY_GET_VENDORS       = "SELECT id, vendor_name, balance FROM vendors"
 
-
-	QUERY_GET_CUSTOMER      = "SELECT id, fullname FROM customers WHERE id = ?"
 	QUERY_GET_VENDOR        = "SELECT id, vendor_name, balance FROM vendors WHERE id = ?"
 	QUERY_GET_CARD          = "SELECT id, balance, available, ts FROM cards WHERE id = ?"
 	QUERY_GET_AUTHORISATION = "SELECT id, amount, card_id, vendor_id, description, captured, reversed, refunded FROM authorisations WHERE id = ?"
@@ -39,7 +37,7 @@ const (
                             WHERE cu.id = ?
                             ORDER BY c.ts`
 
-	QUERY_GET_AUTHORISATION_ALL = `SELECT a.id, a.amount, a.card_id, a.vendor_id, a.description, a.captured, a.reversed, a.refunded, m.amount, m.description, m.movement_type, m.ts
+	QUERY_GET_AUTHORISATION_ALL = `SELECT a.id, a.amount, a.card_id, a.vendor_id, a.description, a.captured, a.reversed, a.refunded, m.id, m.amount, m.description, m.movement_type, m.ts
                             FROM authorisations a
                             LEFT OUTER JOIN auth_movements m ON (m.authorisation_id = a.id)
                             WHERE cu.id = ?
@@ -241,33 +239,6 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 	return cs, nil
 }
 
-func (d *dbGate) getCustomer(id int) (models.Customer, models.ApiError) {
-
-	var (
-		c   models.Customer
-		err error
-	)
-
-	qry := QUERY_GET_CUSTOMER
-
-	err = prepareQry(qry)
-
-	if err != nil {
-		return c, models.ErrorWrap(err)
-	}
-
-	err = stmts[qry].QueryRow(id).Scan(&c.Id, &c.Fullname)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return c, models.ConstructApiError(404, MESSAGE_BAD_ID, "getCustomer", "customer", id)
-		}
-		return c, models.ErrorWrap(err)
-	}
-
-	return c, nil
-}
-
 // GetCustomer gets customer information including associated cards
 func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 
@@ -443,7 +414,7 @@ func (d *dbGate) GetAuthorisation(id int) (models.Authorisation, models.ApiError
 	for rows.Next() {
 
 		//a.id, a.amount, a.card_id, a.vendor_id, a.description, a.captured, a.reversed, a.refunded, m.amount, m.description, m.movement_type, m.ts
-		err := rows.Scan(&a.Id, &a.Amount, &a.CardId, &a.VendorId, &a.Description, &a.Captured, &a.Reversed, &a.Refunded, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
+		err := rows.Scan(&a.Id, &a.Amount, &a.CardId, &a.VendorId, &a.Description, &a.Captured, &a.Reversed, &a.Refunded, &m.Id, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
 
 		if err != nil {
 			return a, models.ErrorWrap(err)

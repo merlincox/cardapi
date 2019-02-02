@@ -118,6 +118,38 @@ func TestGetCustomerNotFound(t *testing.T) {
 	})
 }
 
+func TestGetAuthorisation(t *testing.T) {
+	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		//a.id, a.amount, a.card_id, a.vendor_id, a.description, a.captured, a.reversed, a.refunded, m.amount, m.description, m.movement_type, m.ts
+		expected := sqlmock.NewRows([]string{"a.id", "a.amount", "a.card_id", "a.vendor_id", "a.description", "a.captured", "a.reversed", "a.refunded", "m.id", "m.amount", "m.description", "m.movement_type", "m.ts"}).
+			AddRow(int64(1001), 250, 100001, 1002, "cake", 0, 250, 0, 1009, 250, "cake bad", "REVERSAL", "2019-01-24 01:00:10")
+
+		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+
+		a, apiErr := dbi.GetAuthorisation(1001)
+
+		utils.AssertNoError(t, "Calling GetAuthorisation", apiErr)
+		utils.AssertEquals(t, "Amount for GetAuthorisation result", 250, a.Amount)
+		utils.AssertEquals(t, "Id for GetAuthorisation result", 1001, a.Id)
+		utils.AssertEquals(t, "len(Movements) for GetAuthorisation result", 1, len(a.Movements))
+	})
+}
+
+func TestGetAuthorisationNotFound(t *testing.T) {
+	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
+
+		expected := sqlmock.NewRows([]string{"a.id", "a.amount", "a.card_id", "a.vendor_id", "a.description", "a.captured", "a.reversed", "a.refunded", "m.id", "m.amount", "m.description", "m.movement_type", "m.ts"})
+
+		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
+
+		_, apiErr := dbi.GetAuthorisation(1001)
+
+		utils.AssertEquals(t, "Return status for calling GetAuthorisation with a bad id", 404, apiErr.StatusCode())
+		utils.AssertEquals(t, "Return message for calling GetAuthorisation with bad id 1001", badIdMessage("GetAuthorisation", "authorisation", 1001), apiErr.Error())
+	})
+}
+
 func TestGetVendor(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
