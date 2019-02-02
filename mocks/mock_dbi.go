@@ -46,30 +46,30 @@ func (mr *MockDbiMockRecorder) AddCard(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCard", reflect.TypeOf((*MockDbi)(nil).AddCard), arg0)
 }
 
-// AddCustomer mocks base method
-func (m *MockDbi) AddCustomer(arg0 string) (models.Customer, models.ApiError) {
-	ret := m.ctrl.Call(m, "AddCustomer", arg0)
+// AddOrUpdateCustomer mocks base method
+func (m *MockDbi) AddOrUpdateCustomer(arg0 models.Customer) (models.Customer, models.ApiError) {
+	ret := m.ctrl.Call(m, "AddOrUpdateCustomer", arg0)
 	ret0, _ := ret[0].(models.Customer)
 	ret1, _ := ret[1].(models.ApiError)
 	return ret0, ret1
 }
 
-// AddCustomer indicates an expected call of AddCustomer
-func (mr *MockDbiMockRecorder) AddCustomer(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCustomer", reflect.TypeOf((*MockDbi)(nil).AddCustomer), arg0)
+// AddOrUpdateCustomer indicates an expected call of AddOrUpdateCustomer
+func (mr *MockDbiMockRecorder) AddOrUpdateCustomer(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddOrUpdateCustomer", reflect.TypeOf((*MockDbi)(nil).AddOrUpdateCustomer), arg0)
 }
 
-// AddVendor mocks base method
-func (m *MockDbi) AddVendor(arg0 string) (models.Vendor, models.ApiError) {
-	ret := m.ctrl.Call(m, "AddVendor", arg0)
+// AddOrUpdateVendor mocks base method
+func (m *MockDbi) AddOrUpdateVendor(arg0 models.Vendor) (models.Vendor, models.ApiError) {
+	ret := m.ctrl.Call(m, "AddOrUpdateVendor", arg0)
 	ret0, _ := ret[0].(models.Vendor)
 	ret1, _ := ret[1].(models.ApiError)
 	return ret0, ret1
 }
 
-// AddVendor indicates an expected call of AddVendor
-func (mr *MockDbiMockRecorder) AddVendor(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddVendor", reflect.TypeOf((*MockDbi)(nil).AddVendor), arg0)
+// AddOrUpdateVendor indicates an expected call of AddOrUpdateVendor
+func (mr *MockDbiMockRecorder) AddOrUpdateVendor(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddOrUpdateVendor", reflect.TypeOf((*MockDbi)(nil).AddOrUpdateVendor), arg0)
 }
 
 // Authorise mocks base method

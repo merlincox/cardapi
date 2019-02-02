@@ -80,7 +80,7 @@ type NullableMovement struct {
 }
 
 func (nm NullableMovement) Valid() bool {
-	return nm.MovementType.Valid
+	return nm.Id.Valid
 }
 
 func (nm NullableMovement) Movement() Movement {
@@ -119,7 +119,7 @@ type NullableAuthorisation struct {
 }
 
 func (na NullableAuthorisation) Valid() bool {
-	return na.Amount.Valid
+	return na.Id.Valid
 }
 
 func (na NullableAuthorisation) Authorisation() Authorisation {

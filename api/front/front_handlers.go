@@ -31,7 +31,7 @@ func (front Front) addCustomerHandler(request events.APIGatewayProxyRequest) (in
 		return nil, models.ErrorWrap(err)
 	}
 
-	return front.dbi.AddCustomer(c.Fullname)
+	return front.dbi.AddOrUpdateCustomer(c)
 }
 
 func (front Front) addCardHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
@@ -49,15 +49,15 @@ func (front Front) addCardHandler(request events.APIGatewayProxyRequest) (interf
 
 func (front Front) addVendorHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
 
-	c := models.Vendor{}
+	v := models.Vendor{}
 
-	err := json.Unmarshal([]byte(request.Body), &c)
+	err := json.Unmarshal([]byte(request.Body), &v)
 
 	if err != nil {
 		return nil, models.ErrorWrap(err)
 	}
 
-	return front.dbi.AddVendor(c.VendorName)
+	return front.dbi.AddOrUpdateVendor(v)
 }
 
 func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (interface{}, models.ApiError) {
@@ -75,7 +75,7 @@ func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (in
 	switch request.RequestContext.ResourcePath {
 
 	case "/top-up":
-		subHandler = front.authoriseHandler
+		subHandler = front.topUpHandler
 
 	case "/authorise":
 		subHandler = front.authoriseHandler
@@ -86,8 +86,8 @@ func (front Front) codeRequestHandler(request events.APIGatewayProxyRequest) (in
 	case "/refund":
 		subHandler = front.refundHandler
 
-	case "/revert":
-		subHandler = front.reversalHandler
+	case "/reverse":
+		subHandler = front.reverseHandler
 
 	default:
 		return nil, models.ConstructApiError(400, "Unsupported code request route: %v", request.RequestContext.ResourcePath)
@@ -131,13 +131,13 @@ func (front Front) refundHandler(cr models.CodeRequest) (int, models.ApiError) {
 	return front.dbi.Refund(cr.AuthorisationId, cr.Amount, cr.Description)
 }
 
-func (front Front) reversalHandler(cr models.CodeRequest) (int, models.ApiError) {
+func (front Front) reverseHandler(cr models.CodeRequest) (int, models.ApiError) {
 
 	if cr.AuthorisationId < 1 || cr.Amount < 1 || cr.Description == "" {
 		return -1, models.ConstructApiError(400, "Malformed reversal request: valid authorisationId, amount, description required")
 	}
 
-	return front.dbi.Refund(cr.AuthorisationId, cr.Amount, cr.Description)
+	return front.dbi.Reverse(cr.AuthorisationId, cr.Amount, cr.Description)
 }
 
 func (front Front) topUpHandler(cr models.CodeRequest) (int, models.ApiError) {

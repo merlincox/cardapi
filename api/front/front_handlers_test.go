@@ -25,7 +25,7 @@ func makeFront(t *testing.T) Front {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 }
@@ -38,7 +38,7 @@ func TestStatusRoute(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}
 
@@ -197,6 +197,8 @@ func TestCalcRouteNaN(t *testing.T) {
 	testCalcRouteBad(t, -1, 2, "root", "When sending a request to the /calc route with NaN result", "Out of limits: -1 root 2")
 }
 
+// customer
+
 func TestCustomersRoute(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
@@ -208,7 +210,7 @@ func TestCustomersRoute(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 
@@ -256,7 +258,7 @@ func TestGetCustomerRoute(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 
@@ -294,7 +296,7 @@ func TestGetCustomerRoute404(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 
@@ -329,7 +331,7 @@ func TestGetCustomerRouteMalformedId(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 
@@ -351,7 +353,7 @@ func TestGetCustomerRouteMalformedId(t *testing.T) {
 	utils.AssertEquals(t, "Http code from GetCustomer", 400, response.StatusCode)
 }
 
-func TestAddCustomerRoute(t *testing.T) {
+func TestAddOrUpdateCustomerRouteAdd(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -362,7 +364,7 @@ func TestAddCustomerRoute(t *testing.T) {
 		Branch:    "testing",
 		Platform:  "test",
 		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
-		Release:   "v1.0.1",
+		Release:   "1.0.1",
 		Timestamp: "2019-01-02T14:52:36.951375973Z",
 	}, 123)
 
@@ -372,7 +374,7 @@ func TestAddCustomerRoute(t *testing.T) {
 
 	expected := models.Customer{
 		Fullname: "Joe Bloggs",
-		Id: 1001,
+		Id:       1001,
 	}
 
 	request := events.APIGatewayProxyRequest{
@@ -380,15 +382,1221 @@ func TestAddCustomerRoute(t *testing.T) {
 			ResourcePath: `/customer`,
 			HTTPMethod:   `POST`,
 		},
-		Body:            utils.JsonStringify(body),
+		Body: utils.JsonStringify(body),
 	}
 
-	mockDbi.EXPECT().AddCustomer(body.Fullname).Return(expected, nil).Times(1)
+	mockDbi.EXPECT().AddOrUpdateCustomer(body).Return(expected, nil).Times(1)
 
 	response, _ := testFront.Handler(request)
 
-	utils.AssertEquals(t, "Data from AddCustomer", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Data from AddOrUpdateCustomer", utils.JsonStringify(expected), response.Body)
 	utils.AssertEquals(t, "Http code from GetCustomer", 200, response.StatusCode)
 }
 
-//@TODO write tests for other card API routes
+//vendor
+
+func TestVendorsRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/vendors`,
+			HTTPMethod:   `GET`,
+		},
+	}
+
+	c1 := models.Vendor{
+		VendorName: "Coffee shop",
+		Id:         1001,
+	}
+
+	c2 := models.Vendor{
+		VendorName: "Pub",
+		Id:         1002,
+	}
+
+	cs := []models.Vendor{c1, c2}
+
+	expected := models.VendorList{
+		Items:  cs,
+		Offset: 0,
+		Total:  len(cs),
+	}
+
+	mockDbi.EXPECT().GetVendors().Return(cs, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetVendors", response.Body, utils.JsonStringify(expected))
+	utils.AssertEquals(t, "Http code from GetVendors", response.StatusCode, 200)
+}
+
+func TestGetVendorRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/vendor/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.Vendor{
+		VendorName: "Coffee shop",
+		Id:         1001,
+	}
+
+	mockDbi.EXPECT().GetVendor(1001).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetVendor", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetVendor", 200, response.StatusCode)
+}
+
+func TestGetVendorRoute404(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/vendor/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.ConstructApiError(404, "GetVendor: no vendor with id: 1001")
+
+	mockDbi.EXPECT().GetVendor(1001).Return(models.Vendor{}, expected).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetVendor with invalid id", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetVendor with invalid id", 404, response.StatusCode)
+}
+
+func TestGetVendorRouteMalformedId(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/vendor/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "badid",
+		},
+	}
+
+	expected := models.ConstructApiError(400, "GetVendor: malformed id: badid")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetVendor", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetVendor", 400, response.StatusCode)
+}
+
+func TestAddOrUpdateVendorRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.Vendor{
+		VendorName: "Coffee shop",
+	}
+
+	expected := models.Vendor{
+		VendorName: "Coffee shop",
+		Id:         1001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/vendor`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	mockDbi.EXPECT().AddOrUpdateVendor(body).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from AddOrUpdateVendor", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetVendor", 200, response.StatusCode)
+}
+
+// authorisation
+
+func TestGetAuthorisationRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorisation/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.Authorisation{
+		CardId:      100001,
+		Id:          1001,
+		Captured:    0,
+		Refunded:    0,
+		Reversed:    0,
+		Amount:      210,
+		Description: "Cake",
+	}
+
+	mockDbi.EXPECT().GetAuthorisation(1001).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetAuthorisation", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetAuthorisation", 200, response.StatusCode)
+}
+
+func TestGetAuthorisationRoute404(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorisation/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.ConstructApiError(404, "GetAuthorisation: no authorisation with id: 1001")
+
+	mockDbi.EXPECT().GetAuthorisation(1001).Return(models.Authorisation{}, expected).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetAuthorisation with invalid id", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetAuthorisation with invalid id", 404, response.StatusCode)
+}
+
+func TestGetAuthorisationRouteMalformedId(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorisation/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "badid",
+		},
+	}
+
+	expected := models.ConstructApiError(400, "GetAuthorisation: malformed id: badid")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetAuthorisation", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetAuthorisation", 400, response.StatusCode)
+}
+
+// card
+
+func TestGetCardRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/card/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "100001",
+		},
+	}
+
+	expected := models.Card{
+		Id: 100001,
+	}
+
+	mockDbi.EXPECT().GetCard(100001).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCard", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetCard", 200, response.StatusCode)
+}
+
+func TestGetCardRoute404(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/card/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "1001",
+		},
+	}
+
+	expected := models.ConstructApiError(404, "GetCard: no card with id: 1001")
+
+	mockDbi.EXPECT().GetCard(1001).Return(models.Card{}, expected).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCard with invalid id", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetCard with invalid id", 404, response.StatusCode)
+}
+
+func TestGetCardRouteMalformedId(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/card/{id}`,
+			HTTPMethod:   `GET`,
+		},
+		PathParameters: map[string]string{
+			"id": "badid",
+		},
+	}
+
+	expected := models.ConstructApiError(400, "GetCard: malformed id: badid")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from GetCard", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from GetCard", 400, response.StatusCode)
+}
+
+func TestAddCardRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.Customer{
+		Fullname: "Fred Bloggs",
+		Id:       1001,
+	}
+
+	expected := models.Card{
+		Id:         100001,
+		CustomerId: 1001,
+		Balance:    0,
+		Available:  0,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/card`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	mockDbi.EXPECT().AddCard(body.Id).Return(expected, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from AddCard", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from GetCard", 200, response.StatusCode)
+}
+
+// code requests
+
+func TestTopUpRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:      20000,
+		CardId:      100001,
+		Description: "Top-up from bank",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/top-up`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.CodeResponse{
+		Id: 10009,
+	}
+
+	mockDbi.EXPECT().TopUp(body.CardId, body.Amount, body.Description).Return(expected.Id, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from TopUp", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from TopUp", 200, response.StatusCode)
+}
+
+func TestTopUpRouteBad1(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:      20000,
+		Description: "Top-up from bank",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/top-up`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed top-up request: valid cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from TopUp with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from TopUp with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestTopUpRouteBad2(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		CardId:      10001,
+		Description: "Top-up from bank",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/top-up`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed top-up request: valid cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from TopUp with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from TopUp with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestTopUpRouteBad3(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		CardId: 10001,
+		Amount: 20000,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/top-up`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed top-up request: valid cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from TopUp with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from TopUp with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestAuthoriseRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:      200,
+		CardId:      100001,
+		VendorId:    1001,
+		Description: "Coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorise`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.CodeResponse{
+		Id: 10009,
+	}
+
+	mockDbi.EXPECT().Authorise(body.CardId, body.VendorId, body.Amount, body.Description).Return(expected.Id, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Authorise", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from Authorise", 200, response.StatusCode)
+}
+
+func TestAuthoriseRouteBad1(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:      200,
+		VendorId:    1002,
+		Description: "Cake",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorise`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Authorise with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Authorise with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestAuthoriseRouteBad2(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:      200,
+		CardId:      100001,
+		Description: "Cake",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorise`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Authorise with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Authorise with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestAuthoriseRouteBad3(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		VendorId:    1002,
+		CardId:      100001,
+		Description: "Cake",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorise`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Authorise with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Authorise with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestAuthoriseRouteBad4(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:   200,
+		VendorId: 1002,
+		CardId:   100001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/authorise`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed authorisation request: valid vendorId, cardId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Authorise with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Authorise with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestCaptureRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		AuthorisationId: 1001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/capture`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.CodeResponse{
+		Id: 10009,
+	}
+
+	mockDbi.EXPECT().Capture(body.AuthorisationId, body.Amount).Return(expected.Id, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Capture", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from Capture", 200, response.StatusCode)
+}
+
+func TestCaptureRouteBad1(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount: 20000,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/capture`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed capture request: valid authorisationId, amount required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Capture with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Capture with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestCaptureRouteBad2(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		AuthorisationId: 1002,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/capture`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed capture request: valid authorisationId, amount required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Capture with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Capture with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestRefundRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		AuthorisationId: 1001,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/refund`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.CodeResponse{
+		Id: 10009,
+	}
+
+	mockDbi.EXPECT().Refund(body.AuthorisationId, body.Amount, body.Description).Return(expected.Id, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Refund", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from Refund", 200, response.StatusCode)
+}
+
+func TestRefundRouteBad1(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		AuthorisationId: 1001,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/refund`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed refund request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Refund with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Refund with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestRefundRouteBad2(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/refund`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed refund request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Refund with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Refund with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestRefundRouteBad3(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		AuthorisationId: 1001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/refund`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed refund request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Refund with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Refund with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestReverseRoute(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		AuthorisationId: 1001,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/reverse`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.CodeResponse{
+		Id: 10009,
+	}
+
+	mockDbi.EXPECT().Reverse(body.AuthorisationId, body.Amount, body.Description).Return(expected.Id, nil).Times(1)
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Reverse", utils.JsonStringify(expected), response.Body)
+	utils.AssertEquals(t, "Http code from Reverse", 200, response.StatusCode)
+}
+
+func TestReverseRouteBad1(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		AuthorisationId: 1001,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/reverse`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed reversal request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Reverse with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Reverse with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestReverseRouteBad2(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		Description:     "Bad coffee",
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/reverse`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed reversal request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Reverse with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Reverse with incomplete code request data", 400, response.StatusCode)
+}
+
+func TestReverseRouteBad3(t *testing.T) {
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDbi := mocks.NewMockDbi(mockCtrl)
+
+	testFront := NewFront(mockDbi, models.Status{
+		Branch:    "testing",
+		Platform:  "test",
+		Commit:    "a00eaaf45694163c9b728a7b5668e3d510eb3eb0",
+		Release:   "1.0.1",
+		Timestamp: "2019-01-02T14:52:36.951375973Z",
+	}, 123)
+
+	body := models.CodeRequest{
+		Amount:          200,
+		AuthorisationId: 1001,
+	}
+
+	request := events.APIGatewayProxyRequest{
+		RequestContext: events.APIGatewayProxyRequestContext{
+			ResourcePath: `/reverse`,
+			HTTPMethod:   `POST`,
+		},
+		Body: utils.JsonStringify(body),
+	}
+
+	expected := models.ConstructApiError(400, "Malformed reversal request: valid authorisationId, amount, description required")
+
+	response, _ := testFront.Handler(request)
+
+	utils.AssertEquals(t, "Data from Reverse with incomplete code request data", utils.JsonStringify(expected.ErrorBody()), response.Body)
+	utils.AssertEquals(t, "Http code from Reverse with incomplete code request data", 400, response.StatusCode)
+}

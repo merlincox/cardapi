@@ -21,7 +21,7 @@ const (
 	QUERY_GET_CARD          = "SELECT id, balance, available, ts FROM cards WHERE id = ?"
 	QUERY_GET_AUTHORISATION = "SELECT id, amount, card_id, vendor_id, description, captured, reversed, refunded FROM authorisations WHERE id = ?"
 
-	QUERY_GET_CARD_ALL =   `SELECT c.id, c.balance, c.available, c.ts, m.amount, m.description, m.movement_type, m.ts
+	QUERY_GET_CARD_ALL =   `SELECT c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
                             FROM cards c
                             LEFT OUTER JOIN movements m ON (m.card_id = c.id)
                             WHERE c.id = ?
@@ -45,20 +45,19 @@ const (
                             WHERE cu.id = ?
                             ORDER BY c.ts`
 
+	QUERY_UPDATE_AUTH = `UPDATE authorisations SET captured = captured + ?, refunded = refunded + ?, reversed = reversed + ? WHERE id = ?`
+	QUERY_UPDATE_CARD = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
+	QUERY_UPDATE_VENDOR = `UPDATE vendors SET balance = balance + ? WHERE id = ?`
+
+	QUERY_UPDATE_VENDOR_DETAILS = `UPDATE vendors SET vendor_name = ? WHERE id = ?`
+	QUERY_UPDATE_CUSTOMER_DETAILS = `UPDATE customers SET fullname = ? WHERE id = ?`
+
 	QUERY_ADD_VENDOR   = "INSERT INTO vendors (vendor_name) VALUES (?)"
 	QUERY_ADD_CUSTOMER = "INSERT INTO customers (fullname) VALUES (?)"
 	QUERY_ADD_CARD     = "INSERT INTO cards (customer_id) VALUES (?)"
 
-	QUERY_AUTHORISE = `UPDATE cards SET available = available - ? WHERE id = ? AND available >= ?`
-
 	QUERY_ADD_AUTHORISATION = `INSERT INTO authorisations (card_id, vendor_id, amount, description) 
                                VALUES (?, ?, ?, ?)`
-
-	QUERY_UPDATE_CARD = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
-
-	QUERY_UPDATE_AUTH = `UPDATE authorisations SET captured = captured + ?, refunded = refunded + ?, reversed = reversed + ? WHERE id = ?`
-
-	QUERY_UPDATE_VENDOR = `UPDATE vendors SET balance = balance + ? WHERE id = ?`
 
 	QUERY_ADD_MOVEMENT = `INSERT INTO movements (card_id, amount, description, movement_type) 
                                VALUES (?, ?, ?, ?)`
@@ -83,8 +82,8 @@ type Dbi interface {
 	GetCustomers() ([]models.Customer, models.ApiError)
 	GetVendors() ([]models.Vendor, models.ApiError)
 
-	AddCustomer(fullname string) (models.Customer, models.ApiError)
-	AddVendor(vendorName string) (models.Vendor, models.ApiError)
+	AddOrUpdateCustomer(models.Customer) (models.Customer, models.ApiError)
+	AddOrUpdateVendor(models.Vendor) (models.Vendor, models.ApiError)
 	AddCard(customerId int) (models.Card, models.ApiError)
 
 	GetCustomer(id int) (models.Customer, models.ApiError)
@@ -312,7 +311,7 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 	}
 
 	if cu.Id == 0 {
-		return cu, models.ConstructApiError(404, MESSAGE_BAD_ID, "getCustomer", "customer", id)
+		return cu, models.ConstructApiError(404, MESSAGE_BAD_ID, "GetCustomer", "customer", id)
 	}
 
 	return cu, nil
@@ -361,7 +360,7 @@ func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 	}
 
 	if v.Id == 0 {
-		return v, models.ConstructApiError(404, MESSAGE_BAD_ID, "getVendor", "vendor", id)
+		return v, models.ConstructApiError(404, MESSAGE_BAD_ID, "GetVendor", "vendor", id)
 	}
 
 	return v, nil
@@ -421,6 +420,7 @@ func (d *dbGate) getAuthorisation(id int) (models.Authorisation, models.ApiError
 	return a, nil
 }
 
+// GetAuthorisation gets authorisation information, including associated movements such as capture etc
 func (d *dbGate) GetAuthorisation(id int) (models.Authorisation, models.ApiError) {
 	var (
 		a   models.Authorisation
@@ -462,7 +462,7 @@ func (d *dbGate) GetAuthorisation(id int) (models.Authorisation, models.ApiError
 	}
 
 	if a.Id == 0 {
-		return a, models.ConstructApiError(404, MESSAGE_BAD_ID, "getAuthorisation", "authorisation", id)
+		return a, models.ConstructApiError(404, MESSAGE_BAD_ID, "GetAuthorisation", "authorisation", id)
 	}
 
 	return a, nil
@@ -518,8 +518,8 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 
 	for rows.Next() {
 
-		//c.id, c.balance, c.available, c.ts, m.amount, m.description, m.movement_type, m.ts
-		err := rows.Scan(&c.Id, &c.Balance, &c.Available, &c.Ts, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
+		//c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
+		err := rows.Scan(&c.Id, &c.Balance, &c.Available, &c.Ts, &m.Id, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
 
 		if err != nil {
 			return c, models.ErrorWrap(err)
@@ -538,77 +538,112 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 	}
 
 	if c.Id == 0 {
-		return c, models.ConstructApiError(404, MESSAGE_BAD_ID, "getCard", "card", id)
+		return c, models.ConstructApiError(404, MESSAGE_BAD_ID, "GetCard", "card", id)
 	}
 
 	return c, nil
 }
 
-func (d *dbGate) AddVendor(vendorName string) (models.Vendor, models.ApiError) {
+// Adds a vendor, or if an id already exists updates an existing vendor
+func (d *dbGate) AddOrUpdateVendor(v models.Vendor) (models.Vendor, models.ApiError) {
 
 	var (
-		v   models.Vendor
 		err error
 	)
 
 	qry := QUERY_ADD_VENDOR
 
+	if v.Id > 0 {
+		qry = QUERY_UPDATE_VENDOR_DETAILS
+	}
+
 	err = prepareQry(qry)
 
 	if err != nil {
-		return v, models.ErrorWrap(err)
+		return models.Vendor{}, models.ErrorWrap(err)
 	}
 
-	res, err := stmts[qry].Exec(vendorName)
+	res, err := stmts[qry].Exec(v.VendorName)
 
 	if err != nil {
-		return v, models.ErrorWrap(err)
+		return models.Vendor{}, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
+	if v.Id > 0 {
 
-	if err != nil {
-		return v, models.ErrorWrap(err)
-	}
+		affected, err := res.RowsAffected()
 
-	v = models.Vendor{
-		VendorName: vendorName,
-		Id:         int(id64),
+		if err != nil {
+			return models.Vendor{}, models.ErrorWrap(err)
+		}
+
+		if affected == 0 {
+
+			return models.Vendor{}, models.ConstructApiError(404, MESSAGE_BAD_ID, "AddOrUpdateVendor", "vendor", v.Id)
+		}
+
+	} else {
+
+		id64, err := res.LastInsertId()
+
+		if err != nil {
+			return v, models.ErrorWrap(err)
+		}
+
+		v.Id =  int(id64)
 	}
 
 	return v, nil
 }
 
-func (d *dbGate) AddCustomer(fullname string) (models.Customer, models.ApiError) {
+// Adds a customer, or if an id already exists updates an existing customer
+func (d *dbGate) AddOrUpdateCustomer(c models.Customer) (models.Customer, models.ApiError) {
 
 	var (
-		c   models.Customer
 		err error
 	)
 
 	qry := QUERY_ADD_CUSTOMER
 
+	if c.Id > 0 {
+		qry = QUERY_UPDATE_CUSTOMER_DETAILS
+	}
+
 	err = prepareQry(qry)
 
 	if err != nil {
-		return c, models.ErrorWrap(err)
+		return models.Customer{}, models.ErrorWrap(err)
 	}
 
-	res, err := stmts[qry].Exec(fullname)
+	res, err := stmts[qry].Exec(c.Fullname)
 
 	if err != nil {
-		return c, models.ErrorWrap(err)
+		return models.Customer{}, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
+	if c.Id > 0 {
 
-	if err != nil {
-		return c, models.ErrorWrap(err)
-	}
+		affected, err := res.RowsAffected()
 
-	c = models.Customer{
-		Fullname: fullname,
-		Id:       int(id64),
+		if err != nil {
+			return models.Customer{}, models.ErrorWrap(err)
+		}
+
+		if affected == 0 {
+
+			return models.Customer{}, models.ConstructApiError(404, MESSAGE_BAD_ID, "AddOrUpdateCustomer", "customer", c.Id)
+		}
+
+	} else {
+
+		id64, err := res.LastInsertId()
+
+		if err != nil {
+			return models.Customer{}, models.ErrorWrap(err)
+		}
+
+		c.Id = int(id64)
+
 	}
 
 	return c, nil
@@ -690,7 +725,7 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 
 	defer tx.Rollback()
 
-	qry := QUERY_AUTHORISE
+	qry := QUERY_UPDATE_CARD
 
 	err = prepareQry(qry)
 
@@ -698,7 +733,7 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(amount, cardId, amount)
+	res, err := tx.Stmt(stmts[qry]).Exec(0, amount, cardId, amount)
 
 	if err != nil {
 		return -1, models.ErrorWrap(err)

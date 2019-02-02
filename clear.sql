@@ -1,4 +1,4 @@
-DROP TABLE auth_movememts;
+DROP TABLE auth_movements;
 DROP TABLE movements;
 DROP TABLE authorisations;
 DROP TABLE cards;
