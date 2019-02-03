@@ -3,18 +3,23 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"runtime"
 	"time"
 
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 
 	"github.com/merlincox/cardapi/api/front"
 	"github.com/merlincox/cardapi/db"
 	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/utils"
 )
 
 const cacheTtlSeconds = 60
+
+var handler func(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error)
 
 func main() {
 
@@ -29,8 +34,25 @@ func main() {
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 	}
 
-	dbi, _ := db.NewDbi(os.Getenv("MYSQLDSN"), nil)
-	//@TODO handler db error
+	dbi, apiErr := db.NewDbi(os.Getenv("MYSQLDSN"), nil)
 
-	lambda.Start(front.NewFront(dbi, status, cacheTtlSeconds).Handler)
+	if apiErr != nil {
+
+		handler = func(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
+
+			body := apiErr.ErrorBody()
+			body.Code = http.StatusServiceUnavailable
+
+			response = events.APIGatewayProxyResponse{
+				StatusCode: http.StatusServiceUnavailable,
+				Body:       utils.JsonStringify(body),
+			}
+			return
+		}
+
+	} else {
+		handler = front.NewFront(dbi, status, cacheTtlSeconds).Handler
+	}
+
+	lambda.Start(handler)
 }
