@@ -1,4 +1,4 @@
-## aws-api-gateway-deploy
+# cardapi
 
 This repo contains an implementation of the `aws-api-gateway-deploy` project which deploys an API simulating card 
 transactions using a MySql database (not deployed).
