@@ -1,16 +1,15 @@
 package db
 
 import (
-	"testing"
 	"fmt"
 	"strings"
+	"testing"
 
+	"github.com/go-sql-driver/mysql"
 	"gopkg.in/DATA-DOG/go-sqlmock.v1"
 
-	"github.com/merlincox/cardapi/utils"
-	"github.com/go-sql-driver/mysql"
-
 	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/utils"
 )
 
 var (
@@ -241,7 +240,7 @@ func TestUpdateVendor(t *testing.T) {
 
 		v := models.Vendor{
 			VendorName: "coffee shop",
-			Id: 1002,
+			Id:         1002,
 		}
 
 		expected := sqlmock.NewResult(0, 1)
@@ -280,7 +279,7 @@ func TestUpdateCustomer(t *testing.T) {
 
 		c := models.Customer{
 			Fullname: "Fred Bloggs",
-			Id: 1001,
+			Id:       1001,
 		}
 
 		expected := sqlmock.NewResult(0, 1)
@@ -482,17 +481,6 @@ func TestTopUpOK(t *testing.T) {
 	})
 }
 
-func TestTopUpBadAmount(t *testing.T) {
-	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
-
-		aid, apiErr := dbi.TopUp(100001, 0, "Bank Transfer")
-
-		utils.AssertEquals(t, "Return status for calling TopUp with an invalid amount", 400, apiErr.StatusCode())
-		utils.AssertEquals(t, "Return message for calling TopUp with an invalid amount £0.00", fmt.Sprintf(MESSAGE_INVALID_AMOUNT, "TopUp", float32(0)), apiErr.Error())
-		utils.AssertEquals(t, "Return status for calling TopUp with an invalid amount", -1, aid)
-	})
-}
-
 func TestTopUpBadCard(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
@@ -513,7 +501,7 @@ func TestCaptureOK(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, captured, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 0, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 0, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
@@ -562,7 +550,6 @@ func TestCaptureBadId(t *testing.T) {
 		//id, amount, card_id, vendor_id, description, captured, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"})
 
-
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Capture(1005, 250)
@@ -578,12 +565,12 @@ func TestCaptureInsufficient(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, captured, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 250, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 250, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Capture(1005, 250)
-		
+
 		utils.AssertEquals(t, "Return status for calling Capture with insufficient uncaptured funds", 400, apiErr.StatusCode())
 		utils.AssertEquals(t, "Return message for calling Capture with insufficient uncaptured funds for £2.50", fmt.Sprintf(MESSAGE_INSUFFICIENT_AVAILABLE, "Capture", 2.5, 0.0), apiErr.Error())
 		utils.AssertEquals(t, "Return status for calling Capture with insufficient uncaptured funds", -1, aid)
@@ -595,7 +582,7 @@ func TestRefundOK(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, refundd, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 250, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 250, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
@@ -644,7 +631,6 @@ func TestRefundBadId(t *testing.T) {
 		//id, amount, card_id, vendor_id, description, refundd, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"})
 
-
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Refund(1005, 250, "Bad coffee")
@@ -660,7 +646,7 @@ func TestRefundInsufficient(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, refundd, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 0, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 0, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
@@ -677,7 +663,7 @@ func TestReverseOK(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, reversed, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 0, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 0, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
@@ -716,7 +702,6 @@ func TestReverseBadId(t *testing.T) {
 		//id, amount, card_id, vendor_id, description, reversed, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"})
 
-
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
 		aid, apiErr := dbi.Reverse(1005, 250, "Bad coffee")
@@ -732,7 +717,7 @@ func TestReverseInsufficient(t *testing.T) {
 
 		//id, amount, card_id, vendor_id, description, reversed, reversed, refunded
 		expected := sqlmock.NewRows([]string{"id", "amount", "card_id", "vendor_id", "description", "captured", "reversed", "refunded"}).
-			AddRow(int64(1005), 250, 100001, 1002,  "Coffee", 250, 0, 0)
+			AddRow(int64(1005), 250, 100001, 1002, "Coffee", 250, 0, 0)
 
 		expecter.ExpectPrepare(esc(QUERY_GET_AUTHORISATION)).ExpectQuery().WithArgs(1005).WillReturnRows(expected)
 
@@ -743,4 +728,3 @@ func TestReverseInsufficient(t *testing.T) {
 		utils.AssertEquals(t, "Return status for calling Reverse with insufficient captured funds", -1, aid)
 	})
 }
-

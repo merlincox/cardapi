@@ -3,23 +3,24 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	
+	"sync"
+
 	"github.com/go-sql-driver/mysql"
-	
+
 	"github.com/merlincox/cardapi/models"
 )
 
 const (
 	DEFAULT_DATASOURCE_NAME = "merlincox:merlincox@tcp(www.db4free.net:3306)/merlincox"
 
-	QUERY_GET_CUSTOMERS     = "SELECT id, fullname FROM customers"
-	QUERY_GET_VENDORS       = "SELECT id, vendor_name, balance FROM vendors"
+	QUERY_GET_CUSTOMERS = "SELECT id, fullname FROM customers"
+	QUERY_GET_VENDORS   = "SELECT id, vendor_name, balance FROM vendors"
 
 	QUERY_GET_VENDOR        = "SELECT id, vendor_name, balance FROM vendors WHERE id = ?"
 	QUERY_GET_CARD          = "SELECT id, balance, available, ts FROM cards WHERE id = ?"
 	QUERY_GET_AUTHORISATION = "SELECT id, amount, card_id, vendor_id, description, captured, reversed, refunded FROM authorisations WHERE id = ?"
 
-	QUERY_GET_CARD_ALL =   `SELECT c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
+	QUERY_GET_CARD_ALL = `SELECT c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
                             FROM cards c
                             LEFT OUTER JOIN movements m ON (m.card_id = c.id)
                             WHERE c.id = ?
@@ -43,11 +44,11 @@ const (
                             WHERE cu.id = ?
                             ORDER BY c.ts`
 
-	QUERY_UPDATE_AUTH = `UPDATE authorisations SET captured = captured + ?, refunded = refunded + ?, reversed = reversed + ? WHERE id = ?`
-	QUERY_UPDATE_CARD = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
+	QUERY_UPDATE_AUTH   = `UPDATE authorisations SET captured = captured + ?, refunded = refunded + ?, reversed = reversed + ? WHERE id = ?`
+	QUERY_UPDATE_CARD   = `UPDATE cards SET balance = balance + ?, available = available + ? WHERE id = ?`
 	QUERY_UPDATE_VENDOR = `UPDATE vendors SET balance = balance + ? WHERE id = ?`
 
-	QUERY_UPDATE_VENDOR_DETAILS = `UPDATE vendors SET vendor_name = ? WHERE id = ?`
+	QUERY_UPDATE_VENDOR_DETAILS   = `UPDATE vendors SET vendor_name = ? WHERE id = ?`
 	QUERY_UPDATE_CUSTOMER_DETAILS = `UPDATE customers SET fullname = ? WHERE id = ?`
 
 	QUERY_ADD_VENDOR   = "INSERT INTO vendors (vendor_name) VALUES (?)"
@@ -62,12 +63,10 @@ const (
 
 	QUERY_ADD_AUTH_MOVEMENT = `INSERT INTO auth_movements (authorisation_id, amount, description, movement_type) 
                                VALUES (?, ?, ?, ?)`
-                               
+
 	MYSQL_ERROR_FOREIGN_KEY = 1216
 
 	MESSAGE_BAD_ID = "%v: no %v with id: %v"
-
-	MESSAGE_INVALID_AMOUNT = "%v: invalid amount £%.2f"
 
 	MESSAGE_INSUFFICIENT_AVAILABLE     = "%v: insufficient funds: £%.2f exceeds available £%.2f"
 	MESSAGE_INSUFFICIENT_AVAILABLE_FOR = "%v: insufficient funds for amount £%.2f"
@@ -75,26 +74,42 @@ const (
 	MESSAGE_INVALID_ROW_UPDATE = "%v: invalid row update"
 )
 
+// Dbi interface for database operations
 type Dbi interface {
 
+	// GetCustomers returns an array of customers
 	GetCustomers() ([]models.Customer, models.ApiError)
+	// GetVendors returns an array of vendors
 	GetVendors() ([]models.Vendor, models.ApiError)
+	// Adds a customer using a customer object, or if an id already exists updates an existing customer
 
-	AddOrUpdateCustomer(models.Customer) (models.Customer, models.ApiError)
-	AddOrUpdateVendor(models.Vendor) (models.Vendor, models.ApiError)
-	AddCard(customerId int) (models.Card, models.ApiError)
-
+	// GetCustomer returns a customer object including associated cards
 	GetCustomer(id int) (models.Customer, models.ApiError)
+	// GetVendor returns a vendor object, including associated authorisations
 	GetVendor(id int) (models.Vendor, models.ApiError)
+	// GetCard returns a card object, including movements such as top-ups, payments, refunds
 	GetCard(id int) (models.Card, models.ApiError)
+	// GetAuthorisation returns an authorisation object, including associated movements such as captures, refunds, reversals etc
 	GetAuthorisation(id int) (models.Authorisation, models.ApiError)
 
-	Refund(authorisationId, amount int, description string) (int, models.ApiError)
-	Capture(authorisationId, amount int) (int, models.ApiError)
-	Reverse(authorisationId, amount int, description string) (int, models.ApiError)
-	TopUp(cardId, amount int, description string) (int, models.ApiError)
-	Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError)
+	AddOrUpdateCustomer(models.Customer) (models.Customer, models.ApiError)
+	// AddOrUpdateVendor adds a vendor taking a vendor object, or if an id already exists updates an existing vendor
+	AddOrUpdateVendor(models.Vendor) (models.Vendor, models.ApiError)
+	// AddCard adds a card to a customer, taking a customer id and returning a card object
+	AddCard(customerId int) (models.Card, models.ApiError)
 
+	// TopUp simulates a top-up to a card and returns a top-up code
+	TopUp(cardId, amount int, description string) (int, models.ApiError)
+	// Authorise requests authorisation of a payment and returns an authorisation code
+	Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError)
+	// Capture requests the capture of all or part of an authorised payment and returns a capture code
+	Capture(authorisationId, amount int) (int, models.ApiError)
+	// Refund requests a refund all or part of a captured payment and returns a refund code
+	Refund(authorisationId, amount int, description string) (int, models.ApiError)
+	// Reverse requests a reversal of all or part of a authorisation and returns a reversal code
+	Reverse(authorisationId, amount int, description string) (int, models.ApiError)
+
+	// Close closes prepared statements and the database connection
 	Close()
 }
 
@@ -104,9 +119,14 @@ var (
 	dbd   *dbGate
 	dbx   *sql.DB
 	stmts = make(map[string]*sql.Stmt, 10)
+	mutex sync.Mutex
 )
 
+// Returns a new Dbi singleton instance, retrieves the existing instance, or injects and returns one for testing
 func NewDbi(injected *sql.DB) (Dbi, models.ApiError) {
+
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	if dbx == nil {
 
@@ -130,8 +150,11 @@ func NewDbi(injected *sql.DB) (Dbi, models.ApiError) {
 	return dbd, nil
 }
 
-//Close close prepared statements and database connection
+// Close close prepared statements and the database connection
 func (d *dbGate) Close() {
+
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	for _, stmt := range stmts {
 		stmt.Close()
@@ -145,7 +168,11 @@ func (d *dbGate) Close() {
 	dbx = nil
 }
 
+// Retreive prepared query if it exists, or prepare the query and store it
 func prepareQry(qry string) (err error) {
+
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	_, prepared := stmts[qry]
 
@@ -157,7 +184,46 @@ func prepareQry(qry string) (err error) {
 	return
 }
 
-// GetVendors gets array of vendors
+type execResult struct {
+	numRowsAffected int
+	lastInsertedId  int
+	apiErr          models.ApiError
+	mysqlCode       uint16
+}
+
+// Reduce boiler plate by handling execution results in one place
+func handleResults(result sql.Result, err error) execResult {
+
+	if err == nil {
+
+		affected, err := result.RowsAffected()
+
+		if err == nil {
+
+			lastId, err := result.LastInsertId()
+
+			if err == nil {
+
+				return execResult{
+					numRowsAffected: int(affected),
+					lastInsertedId:  int(lastId),
+				}
+			}
+		}
+	}
+
+	res := execResult{
+		apiErr: models.ErrorWrap(err),
+	}
+
+	if mysqlError, ok := err.(*mysql.MySQLError); ok {
+		res.mysqlCode = mysqlError.Number
+	}
+
+	return res
+}
+
+// GetVendors returns an array of vendors
 func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
 
 	var (
@@ -175,6 +241,10 @@ func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
 	}
 
 	rows, err := stmts[qry].Query()
+
+	if err != nil {
+		return vs, models.ErrorWrap(err)
+	}
 
 	defer rows.Close()
 
@@ -198,7 +268,7 @@ func (d *dbGate) GetVendors() ([]models.Vendor, models.ApiError) {
 	return vs, nil
 }
 
-// GetCustomers gets array of customers
+// GetCustomers returns an array of customers
 func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 
 	var (
@@ -216,6 +286,10 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 	}
 
 	rows, err := stmts[qry].Query()
+
+	if err != nil {
+		return cs, models.ErrorWrap(err)
+	}
 
 	defer rows.Close()
 
@@ -239,7 +313,7 @@ func (d *dbGate) GetCustomers() ([]models.Customer, models.ApiError) {
 	return cs, nil
 }
 
-// GetCustomer gets customer information including associated cards
+// GetCustomer returns a customer object including associated cards
 func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 
 	var (
@@ -257,6 +331,10 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 	}
 
 	rows, err := stmts[qry].Query(id)
+
+	if err != nil {
+		return cu, models.ErrorWrap(err)
+	}
 
 	defer rows.Close()
 
@@ -288,7 +366,7 @@ func (d *dbGate) GetCustomer(id int) (models.Customer, models.ApiError) {
 	return cu, nil
 }
 
-// GetVendor gets vendor information, including associated authorisations
+// GetVendor returns a vendor object, including associated authorisations
 func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 
 	var (
@@ -306,6 +384,10 @@ func (d *dbGate) GetVendor(id int) (models.Vendor, models.ApiError) {
 	}
 
 	rows, err := stmts[qry].Query(id)
+
+	if err != nil {
+		return v, models.ErrorWrap(err)
+	}
 
 	defer rows.Close()
 
@@ -378,12 +460,12 @@ func (d *dbGate) getAuthorisation(id int) (models.Authorisation, models.ApiError
 		return a, models.ErrorWrap(err)
 	}
 
-    // id, amount, card_id, vendor_id, description, captured, reversed, refunded
+	// id, amount, card_id, vendor_id, description, captured, reversed, refunded
 	err = stmts[qry].QueryRow(id).Scan(&a.Id, &a.Amount, &a.CardId, &a.VendorId, &a.Description, &a.Captured, &a.Reversed, &a.Refunded)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return a, models.ConstructApiError(404, MESSAGE_BAD_ID, "GetAuthorisation", "authorisation", id)
+			return a, models.ConstructApiError(404, MESSAGE_BAD_ID, "getAuthorisation", "authorisation", id)
 		}
 		return a, models.ErrorWrap(err)
 	}
@@ -391,7 +473,7 @@ func (d *dbGate) getAuthorisation(id int) (models.Authorisation, models.ApiError
 	return a, nil
 }
 
-// GetAuthorisation gets authorisation information, including associated movements such as capture etc
+// GetAuthorisation returns an authorisation object, including associated movements such as capture etc
 func (d *dbGate) GetAuthorisation(id int) (models.Authorisation, models.ApiError) {
 	var (
 		a   models.Authorisation
@@ -466,7 +548,7 @@ func (d *dbGate) getCard(id int) (models.Card, models.ApiError) {
 	return c, nil
 }
 
-// GetCard gets card details, including movements
+// GetCard  returns a card object, including movements such as top-ups, payments, refunds
 func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 
 	var (
@@ -515,7 +597,7 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 	return c, nil
 }
 
-// Adds a vendor, or if an id already exists updates an existing vendor
+// AddOrUpdateVendor adds a vendor taking a vendor object, or if an id already exists updates an existing vendor
 func (d *dbGate) AddOrUpdateVendor(v models.Vendor) (models.Vendor, models.ApiError) {
 
 	var (
@@ -534,40 +616,28 @@ func (d *dbGate) AddOrUpdateVendor(v models.Vendor) (models.Vendor, models.ApiEr
 		return models.Vendor{}, models.ErrorWrap(err)
 	}
 
-	res, err := stmts[qry].Exec(v.VendorName)
+	res := handleResults(stmts[qry].Exec(v.VendorName))
 
-	if err != nil {
-		return models.Vendor{}, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return models.Vendor{}, res.apiErr
 	}
 
 	if v.Id > 0 {
 
-		affected, err := res.RowsAffected()
-
-		if err != nil {
-			return models.Vendor{}, models.ErrorWrap(err)
-		}
-
-		if affected == 0 {
+		if res.numRowsAffected == 0 {
 
 			return models.Vendor{}, models.ConstructApiError(404, MESSAGE_BAD_ID, "AddOrUpdateVendor", "vendor", v.Id)
 		}
 
 	} else {
 
-		id64, err := res.LastInsertId()
-
-		if err != nil {
-			return v, models.ErrorWrap(err)
-		}
-
-		v.Id =  int(id64)
+		v.Id = res.lastInsertedId
 	}
 
 	return v, nil
 }
 
-// Adds a customer, or if an id already exists updates an existing customer
+// AddOrUpdateCustomer adds a customer taking a customer object, or if an id already exists updates an existing customer
 func (d *dbGate) AddOrUpdateCustomer(c models.Customer) (models.Customer, models.ApiError) {
 
 	var (
@@ -586,40 +656,24 @@ func (d *dbGate) AddOrUpdateCustomer(c models.Customer) (models.Customer, models
 		return models.Customer{}, models.ErrorWrap(err)
 	}
 
-	res, err := stmts[qry].Exec(c.Fullname)
+	res := handleResults(stmts[qry].Exec(c.Fullname))
 
-	if err != nil {
-		return models.Customer{}, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return models.Customer{}, res.apiErr
 	}
 
 	if c.Id > 0 {
-
-		affected, err := res.RowsAffected()
-
-		if err != nil {
-			return models.Customer{}, models.ErrorWrap(err)
-		}
-
-		if affected == 0 {
-
+		if res.numRowsAffected == 0 {
 			return models.Customer{}, models.ConstructApiError(404, MESSAGE_BAD_ID, "AddOrUpdateCustomer", "customer", c.Id)
 		}
-
 	} else {
-
-		id64, err := res.LastInsertId()
-
-		if err != nil {
-			return models.Customer{}, models.ErrorWrap(err)
-		}
-
-		c.Id = int(id64)
-
+		c.Id = res.lastInsertedId
 	}
 
 	return c, nil
 }
 
+// AddCard adds a card to a customer, taking a customer id and returning a card object
 func (d *dbGate) AddCard(customerId int) (models.Card, models.ApiError) {
 
 	var (
@@ -635,31 +689,26 @@ func (d *dbGate) AddCard(customerId int) (models.Card, models.ApiError) {
 		return c, models.ErrorWrap(err)
 	}
 
-	res, err := stmts[qry].Exec(customerId)
+	res := handleResults(stmts[qry].Exec(customerId))
 
-	if err != nil {
-		if driverErr, ok := err.(*mysql.MySQLError); ok {
-			if driverErr.Number == MYSQL_ERROR_FOREIGN_KEY {
-				return c, models.ConstructApiError(400, MESSAGE_BAD_ID, "AddCard", "customer", customerId)
-			}
+	if res.apiErr != nil {
+
+		if res.mysqlCode == MYSQL_ERROR_FOREIGN_KEY {
+			return c, models.ConstructApiError(400, MESSAGE_BAD_ID, "AddCard", "customer", customerId)
 		}
-		return c, models.ErrorWrap(err)
-	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return c, models.ErrorWrap(err)
+		return c, res.apiErr
 	}
 
 	c = models.Card{
 		CustomerId: customerId,
-		Id:         int(id64),
+		Id:         res.lastInsertedId,
 	}
 
 	return c, nil
 }
 
+// Authorise requests authorisation of a payment and returns an authorisation code
 func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (int, models.ApiError) {
 
 	_, apiErr := d.getVendor(vendorId)
@@ -704,17 +753,15 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(0, amount, cardId, amount)
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(0, amount, cardId, amount))
 
 	if err != nil {
-		return -1, models.ErrorWrap(err)
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err := res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(400, MESSAGE_INSUFFICIENT_AVAILABLE_FOR, "Authorise", float32(amount)/100)
 	}
 
@@ -726,10 +773,10 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(cardId, vendorId, amount, description)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(cardId, vendorId, amount, description))
 
 	if err != nil {
-		return -1, models.ErrorWrap(err)
+		return -1, res.apiErr
 	}
 
 	err = tx.Commit()
@@ -738,20 +785,11 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 		return -1, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return -1, models.ErrorWrap(err)
-	}
-
-	return int(id64), nil
+	return res.lastInsertedId, nil
 }
 
+// TopUp simulates a top-up to a card and returns a top-up code
 func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiError) {
-
-	if amount <= 0 {
-		return -1, models.ConstructApiError(400, MESSAGE_INVALID_AMOUNT, "TopUp", float32(amount)/100)
-	}
 
 	_, apiErr := d.getCard(cardId)
 
@@ -780,17 +818,15 @@ func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiE
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(amount, amount, cardId)
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(amount, amount, cardId))
 
 	if err != nil {
-		return -1, models.ErrorWrap(err)
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err := res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "TopUp")
 	}
 
@@ -802,10 +838,10 @@ func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiE
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(cardId, amount, description, "TOP-UP")
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(cardId, amount, description, "TOP-UP"))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	err = tx.Commit()
@@ -814,16 +850,10 @@ func (d *dbGate) TopUp(cardId, amount int, description string) (int, models.ApiE
 		return -1, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return -1, models.ErrorWrap(err)
-	}
-
-	return int(id64), nil
+	return res.lastInsertedId, nil
 }
 
-// Capture all or part of an authorised payment
+// Capture requests the capture of all or part of an authorised payment and returns a capture code
 func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 
 	auth, apiErr := d.getAuthorisation(authorisationId)
@@ -857,17 +887,15 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(-amount, 0, auth.CardId)
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(-amount, 0, auth.CardId))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err := res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Capture")
 	}
 
@@ -880,21 +908,19 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 	}
 
 	//captured = captured + ?, refunded = refunded + ?, reversed = reversed + ?
-	res, err = tx.Stmt(stmts[qry]).Exec(amount, 0, 0, auth.Id)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(amount, 0, 0, auth.Id))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err = res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Capture")
 	}
 
-    // this is only done in this simulation so that the effect of capturing is easily visible through a UI
+	// this is only done in this simulation so that the effect of capturing is easily visible through a UI
 	qry = QUERY_UPDATE_VENDOR
 
 	err = prepareQry(qry)
@@ -903,17 +929,15 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(amount, auth.VendorId)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(amount, auth.VendorId))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err = res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Capture")
 	}
 
@@ -925,10 +949,10 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(auth.CardId, -amount, auth.Description, "PURCHASE") //? add original purchase date from auth.Ts
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(auth.CardId, -amount, auth.Description, "PURCHASE")) //? add original purchase date from auth.Ts
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	qry = QUERY_ADD_AUTH_MOVEMENT
@@ -939,10 +963,10 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(auth.Id, amount, fmt.Sprintf("Capture of £%.2f", float32(amount)/100), "CAPTURE")
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(auth.Id, amount, fmt.Sprintf("Capture of £%.2f", float32(amount)/100), "CAPTURE"))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	err = tx.Commit()
@@ -951,16 +975,10 @@ func (d *dbGate) Capture(authorisationId, amount int) (int, models.ApiError) {
 		return -1, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return -1, models.ErrorWrap(err)
-	}
-
-	return int(id64), nil
+	return res.lastInsertedId, nil
 }
 
-// Refund refunds all or part of an authorisation after it has been captured
+// Refund requests a refund all or part of a captured payment and returns a refund code
 func (d *dbGate) Refund(authorisationId, amount int, description string) (int, models.ApiError) {
 
 	auth, apiErr := d.getAuthorisation(authorisationId)
@@ -994,17 +1012,15 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(amount, amount, auth.CardId)
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(amount, amount, auth.CardId))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err := res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Refund")
 	}
 
@@ -1017,17 +1033,15 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 	}
 
 	//captured = captured + ?, refunded = refunded + ?, reversed = reversed + ?
-	res, err = tx.Stmt(stmts[qry]).Exec(0, amount, 0, auth.Id)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(0, amount, 0, auth.Id))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err = res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Capture")
 	}
 
@@ -1040,17 +1054,15 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(-amount, auth.VendorId)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(-amount, auth.VendorId))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err = res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Refund")
 	}
 
@@ -1062,10 +1074,10 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(auth.CardId, amount, description, "REFUND")
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(auth.CardId, amount, description, "REFUND"))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	qry = QUERY_ADD_AUTH_MOVEMENT
@@ -1076,10 +1088,10 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(auth.Id, -amount, description, "REFUND") 
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(auth.Id, -amount, description, "REFUND"))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	err = tx.Commit()
@@ -1088,16 +1100,10 @@ func (d *dbGate) Refund(authorisationId, amount int, description string) (int, m
 		return -1, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return -1, models.ErrorWrap(err)
-	}
-
-	return int(id64), nil
+	return res.lastInsertedId, nil
 }
 
-// Reverse reverses all or part of a payment authorisation before it has been captured
+// Reverse requests a reversal of all or part of a authorisation and returns a reversal code
 func (d *dbGate) Reverse(authorisationId, amount int, description string) (int, models.ApiError) {
 
 	auth, apiErr := d.getAuthorisation(authorisationId)
@@ -1131,17 +1137,15 @@ func (d *dbGate) Reverse(authorisationId, amount int, description string) (int, 
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err := tx.Stmt(stmts[qry]).Exec(0, amount, auth.CardId)
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(0, amount, auth.CardId))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err := res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Reverse")
 	}
 
@@ -1154,20 +1158,18 @@ func (d *dbGate) Reverse(authorisationId, amount int, description string) (int, 
 	}
 
 	//captured = captured + ?, refunded = refunded + ?, reversed = reversed + ?
-	res, err = tx.Stmt(stmts[qry]).Exec(0, 0, amount, auth.Id)
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(0, 0, amount, auth.Id))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	//double check that exactly one row was updated
 
-	affected, err = res.RowsAffected()
-
-	if affected != int64(1) {
+	if res.numRowsAffected != 1 {
 		return -1, models.ConstructApiError(500, MESSAGE_INVALID_ROW_UPDATE, "Reverse")
 	}
-	
+
 	qry = QUERY_ADD_AUTH_MOVEMENT
 
 	err = prepareQry(qry)
@@ -1176,10 +1178,10 @@ func (d *dbGate) Reverse(authorisationId, amount int, description string) (int, 
 		return -1, models.ErrorWrap(err)
 	}
 
-	res, err = tx.Stmt(stmts[qry]).Exec(auth.Id, -amount, description, "REVERSAL")
+	res = handleResults(tx.Stmt(stmts[qry]).Exec(auth.Id, -amount, description, "REVERSAL"))
 
-	if err != nil {
-		return -1, models.ErrorWrap(err)
+	if res.apiErr != nil {
+		return -1, res.apiErr
 	}
 
 	err = tx.Commit()
@@ -1188,11 +1190,5 @@ func (d *dbGate) Reverse(authorisationId, amount int, description string) (int, 
 		return -1, models.ErrorWrap(err)
 	}
 
-	id64, err := res.LastInsertId()
-
-	if err != nil {
-		return -1, models.ErrorWrap(err)
-	}
-
-	return int(id64), nil
+	return res.lastInsertedId, nil
 }
