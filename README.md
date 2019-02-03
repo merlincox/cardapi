@@ -1,9 +1,9 @@
 ## aws-api-gateway-deploy
 
-This repo contains a Bash deploy script and a CloudFormation template for deploying a serverless API implemented as a
- AWS API Gateway served by a simple Golang lambbda
+This repo contains an implementation of the `aws-api-gateway-deploy` project which deploys an API simulating card 
+transactions using a MySql database (not deployed).
 
-The template
+The CloudFormation template
 
 * Creates the lambda and passes an environment to it
 * Creates the API Gateway with two sample endpoints linked to the lambda
@@ -62,68 +62,27 @@ This can be exported using the `export.sh` script.
 In addition a schema-generator executable can be created from here: https://github.com/merlincox/generate
 
 If this is added to the system path, the `export.sh` will also generate Go structs for the API and optionally replace 
-the pkg/models/api.go file if that is out of sync with the API. (Therefore any additionmal models which do not feature 
-directly in the API should be placed in the pkg/models/models.go file).
+the pkg/models/api.go file if that is out of sync with the API. (Therefore any additional models which do not feature 
+directly in the API should be placed in the pkg/models/models.go file, as well as any functions attached to API models).
 
 ### Endpoints
 
-The `/status` endpoint demonstrates that the environment has been passed to the lambda, and will return the git branch
-commit and release tag, the platform and a timestamp for when the lambda was first invoked.
 
-The `/calc` endpoint uses simple maths functions to demonstrate handling of path and query parameters, headers, error-handling and API-level caching.
-
-Usage:
-
-`https://{my-subdomain}[-{platform}].{my-domain}/calc/{op}?val1={val1}&val2={val2}`
-
-where {op} can be one of "add", "substract", "multiply", "divide", "power" or "root" (all of which can be shortened to 
-3 letters) and val1 and va12 are numbers.
-
-The Accept-Language request header can optionally be used to format the result.
-
-For example, `/calc/mul?val1=423.456&val2=30.1` with Accept-Language set to "en-GB" will return
-
-```
-{
-     "locale": "en-GB",
-     "op": "multiply",
-     "result": "12,746.0256",
-     "val1": 423.456,
-     "val2": 30.1
-}
-```
-whereas with Accept-Language as "fr-FR" it will produce
-```
-{
-     "locale": "fr-FR",
-     "op": "multiply",
-     "result": "12 746,0256",
-     "val1": 423.456,
-     "val2": 30.1
-}
-```
-
-API-level caching can determined by looking at the x-Timestamp response header. If you repeat a query and the value of 
-this header does not change, you are seeing a cached response.
+| Endpoint  | Method | Body or Parameter | Description |
+| ------------- | ------------- | ------------- | ------------- |
+| /status | GET  | (none) | Returns status data about the API, including the platform deployed to and the Git branch, release and commit deployed from |
+| /customers | GET | (none) | Returns the list of customers|
+| /vendors | GET | (none) | Returns the list of vendors|
+| /card/{id} | GET | id of the card | Returns data about a card identified by id, including movements such as top-ups, payments and refunds|
+| /authorisation/{id | GET | id of the authorisation | Returns data about a payment authorisation identified by id, including movements such as captures, reversals and refunds|
+| /customer/{id} | GET | id of the customer | Returns data about customer by id, including cards held |
+| /vendor/{id} | GET | id of the vendor | Returns data about a vendor identified by id, including authorisations|
+| /customer | POST | customer object, with or without an id| Adds or updates a customer, which is returned |
+| /vendor | POST | vendor object, with or without an id | Adds or updates a vendor, which is returned |
+| /card | POST | customer object with an id | Adds a card to a customer. Returns the card. |
+| /authorise | POST | Code request object with card id, vendor id, amount and description | Request to authorise a payment, returning an authorisation code |
+| /capture | POST | Code request object with authorisation id and amount | Request to capture all or part of an authorised payment, returning a capture code |
+| /reverse | POST | Code request object with authorisation id, amount and description | Request to reverse all or part of an authorised payment, returning a reversal code. Cannot be applied to captured payments. |
+| /refund | POST | Code request object with authorisation id, amount and description | Request to refund all or part of an authorised and captured payment, returning a reversal code. Cannot be applied to uncaptured payments. |
 
 
-This endpoint also demonstrates error handling.
-
-`/calc/div?val1=423.456&val2=0` will return
-
-```
-{
-    "message": "Out of limits: 423.456 divide 0",
-    "code": 400
-}
-
-```
-
-`calc/bad?val1=423.456&val2=123` will return
-
-```
-{
-    "message": "Unknown calc operation: bad",
-    "code": 400
-}
-```
