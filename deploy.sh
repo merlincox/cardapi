@@ -11,6 +11,23 @@ for cmd in "go glide aws git jq"; do
 
 done
 
+# The mysql.sh script contain DB connection details and should be git-ignored
+mysql_script=mysql.sh
+
+if [[ ! -f ${mysql_script} ]]; then
+   echo "${mysql_script} is required to run this script."  >&2
+   echo "See ${mysql_script}.example for an example."  >&2
+
+   exit 1
+fi
+
+source ${mysql_script}
+
+if [[ -z "${mysql_dsn}" ]]; then
+   echo "mysql_dsn undefined."  >&2
+   exit 1
+fi
+
 status=$(git status --porcelain)
 
 if [[ ! -z "$status" ]]; then
@@ -179,5 +196,6 @@ aws cloudformation deploy \
        --capabilities CAPABILITY_IAM \
        --parameter-overrides Platform="${platform}" Commit="${git_commit}" \
            CustomDomain="${custom_domain}" HostedZone="${domain_zone_id}" \
-           Release="${git_tag}" Branch="${git_branch}" CertificateArn="${certificate_arn}"
+           Release="${git_tag}" Branch="${git_branch}" CertificateArn="${certificate_arn}" \
+           MysqlDataSourceName="${mysl_dsn}"
 

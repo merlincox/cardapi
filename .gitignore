@@ -5,3 +5,4 @@ export
 package.yml
 .idea
 vendor
+mysql.sh

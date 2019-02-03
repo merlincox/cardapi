@@ -11,8 +11,6 @@ import (
 )
 
 const (
-	DEFAULT_DATASOURCE_NAME = "merlincox:merlincox@tcp(www.db4free.net:3306)/merlincox"
-
 	QUERY_GET_CUSTOMERS = "SELECT id, fullname FROM customers"
 	QUERY_GET_VENDORS   = "SELECT id, vendor_name, balance FROM vendors"
 
@@ -123,7 +121,7 @@ var (
 )
 
 // Returns a new Dbi singleton instance, retrieves the existing instance, or injects and returns one for testing
-func NewDbi(injected *sql.DB) (Dbi, models.ApiError) {
+func NewDbi(mysqlDsn string, injected *sql.DB) (Dbi, models.ApiError) {
 
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -132,7 +130,7 @@ func NewDbi(injected *sql.DB) (Dbi, models.ApiError) {
 
 		if injected == nil {
 
-			s, err := sql.Open("mysql", DEFAULT_DATASOURCE_NAME)
+			s, err := sql.Open("mysql", mysqlDsn)
 
 			if err != nil {
 				return nil, models.ErrorWrap(err)

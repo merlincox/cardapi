@@ -29,7 +29,7 @@ func main() {
 		Timestamp: time.Now().Format(time.RFC3339Nano),
 	}
 
-	dbi, _ := db.NewDbi(nil)
+	dbi, _ := db.NewDbi(os.Getenv("MYSQLDSN"), nil)
 	//@TODO handler db error
 
 	lambda.Start(front.NewFront(dbi, status, cacheTtlSeconds).Handler)

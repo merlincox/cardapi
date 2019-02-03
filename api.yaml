@@ -29,6 +29,9 @@ Parameters:
   CustomDomain:
     Type: String
     Description: Domain mapped to API
+  MysqlDataSourceName:
+    Type: String
+    Description: Data source name for MySQL
 
 Resources:
 
@@ -46,6 +49,7 @@ Resources:
           PLATFORM: !Ref Platform
           REGION: !Ref "AWS::Region"
           BRANCH: !Ref Branch
+          MYSQLDSN: !Ref MysqlDataSourceName
       Role: !GetAtt ApiLambdaFunctionIAMRole.Arn
       Events:
         AnyRequest:

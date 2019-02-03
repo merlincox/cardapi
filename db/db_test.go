@@ -40,7 +40,7 @@ func esc(src string) string {
 func testWrapper(t *testing.T, callback func(*testing.T, sqlmock.Sqlmock, Dbi)) {
 
 	mockDb, expecter, _ := sqlmock.New()
-	dbi, _ := NewDbi(mockDb)
+	dbi, _ := NewDbi("", mockDb)
 	defer dbi.Close()
 
 	callback(t, expecter, dbi)

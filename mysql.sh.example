@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# This file should be git-ignored
+
+mysql_domain=example.com:3306
+mysql_db=example
+mysql_user=example
+mysql_passwd="example"
+
+mysql_dsn="${mysql_user}:${mysql_passwd}@tcp(${mysql_domain})/${mysql_db}"
+
