@@ -1,20 +1,20 @@
-// The Front package routes HTTP requests to an appropriately routed handler bound to ReelIndexer and JsonHydrator instances and returns a response
+// The Front package routes HTTP requests to an appropriately routed handler and returns a response
 // whose Body member is a JSON-encoded API object. In case of error it will be a JSON-encoded ApiErrorBody.
 package front
 
 import (
 	"fmt"
-	"net/http"
-	"time"
 	"log"
-	"strconv"
+	"net/http"
 	"runtime/debug"
+	"strconv"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 
-	"github.com/merlincox/cardapi/utils"
-	"github.com/merlincox/cardapi/models"
 	"github.com/merlincox/cardapi/db"
+	"github.com/merlincox/cardapi/models"
+	"github.com/merlincox/cardapi/utils"
 )
 
 type Front struct {
@@ -24,11 +24,9 @@ type Front struct {
 	cacheMaxAge int
 }
 
-type FrontHandler func(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error)
 type innerHandler func(request events.APIGatewayProxyRequest) (interface{}, models.ApiError)
 
-// NewFront Create a new Front object
-//
+// NewFront creates a new Front object
 func NewFront(dbi db.Dbi, status models.Status, cacheMaxAge int) Front {
 
 	f := Front{
@@ -42,9 +40,9 @@ func NewFront(dbi db.Dbi, status models.Status, cacheMaxAge int) Front {
 	return f
 }
 
-// Receive a APIGatewayProxyRequest and returns a APIGatewayProxyResponse with nil error
+// Front.Handler takes an APIGatewayProxyRequest and returns an APIGatewayProxyResponse with an error which should be nil
 //
-// Any panic should be recovered and wrapped into an ApiErrorBody, and the trace logged
+// Any downstream panic should be recovered and wrapped into an ApiErrorBody, and the trace logged
 func (front Front) Handler(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
 
 	useCache := request.RequestContext.HTTPMethod == "GET"
@@ -111,8 +109,6 @@ func (front *Front) getHandlerForRoute(route string) innerHandler {
 
 	case "GET/customers":
 		return front.getCustomersHandler
-
-
 	}
 
 	return front.unknownRouteHandler
