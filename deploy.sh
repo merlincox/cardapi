@@ -197,5 +197,5 @@ aws cloudformation deploy \
        --parameter-overrides Platform="${platform}" Commit="${git_commit}" \
            CustomDomain="${custom_domain}" HostedZone="${domain_zone_id}" \
            Release="${git_tag}" Branch="${git_branch}" CertificateArn="${certificate_arn}" \
-           MysqlDataSourceName="${mysl_dsn}"
+           MysqlDataSourceName="${mysql_dsn}"
 
