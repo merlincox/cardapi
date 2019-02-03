@@ -10,8 +10,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 
 	"github.com/merlincox/cardapi/api/front"
-	"github.com/merlincox/cardapi/models"
 	"github.com/merlincox/cardapi/db"
+	"github.com/merlincox/cardapi/models"
 )
 
 const cacheTtlSeconds = 60

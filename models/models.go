@@ -1,9 +1,9 @@
 package models
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
-	"database/sql"
 )
 
 type ApiError interface {

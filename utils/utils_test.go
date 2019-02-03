@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"testing"
 	"encoding/json"
+	"testing"
 )
 
 func TestSlug(t *testing.T) {
@@ -65,7 +65,7 @@ func TestJsonStack(t *testing.T) {
 	AssertEquals(t, "JsonStrack returns correct number of stack lines:", 4, len(traceData.Stack))
 	AssertEquals(t, "JsonStrack correctly strips lines", "line2", traceData.Stack[1])
 
-	out2 := JsonStack(func(){}, mockStack)
+	out2 := JsonStack(func() {}, mockStack)
 
 	err2 := json.Unmarshal([]byte(out2), &traceData)
 	AssertNoError(t, "JsonStack parses without error", err2)

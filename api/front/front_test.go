@@ -43,7 +43,9 @@ func (front *Front) dummyDataRouter(route string) innerHandler {
 
 func (front Front) dummyDataHandler(request events.APIGatewayProxyRequest) (result interface{}, apiError models.ApiError) {
 
-	return struct{Data string `json:"data"`}{Data: "Dummy"}, nil
+	return struct {
+		Data string `json:"data"`
+	}{Data: "Dummy"}, nil
 }
 
 func TestFrontDummyData(t *testing.T) {
@@ -120,7 +122,7 @@ func (front *Front) unmarshallableRouter(route string) innerHandler {
 
 func (front Front) unmarshallableHandler(request events.APIGatewayProxyRequest) (result interface{}, apiError models.ApiError) {
 
-	return func(){}, nil
+	return func() {}, nil
 }
 
 func TestFrontUnparseableData(t *testing.T) {

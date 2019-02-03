@@ -1,16 +1,16 @@
 package front
 
 import (
-	"strconv"
+	"encoding/json"
 	"fmt"
 	"math"
-	"encoding/json"
+	"strconv"
 
-	"golang.org/x/text/message"
 	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 
 	"github.com/aws/aws-lambda-go/events"
-	
+
 	"github.com/merlincox/cardapi/models"
 )
 
@@ -324,7 +324,7 @@ func getFloatFromRequest(request events.APIGatewayProxyRequest, key string) (res
 
 	val, ok := request.QueryStringParameters[key]
 
-	if ! ok {
+	if !ok {
 		err = fmt.Errorf("Missing parameter %v", key)
 		return
 	}

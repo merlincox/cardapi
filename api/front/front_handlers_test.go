@@ -1,17 +1,17 @@
 package front
 
 import (
-	"testing"
 	"fmt"
 	"strings"
+	"testing"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/golang/mock/gomock"
 	. "github.com/smartystreets/goconvey/convey"
 
+	"github.com/merlincox/cardapi/mocks"
 	"github.com/merlincox/cardapi/models"
 	"github.com/merlincox/cardapi/utils"
-	"github.com/merlincox/cardapi/mocks"
 )
 
 func makeFront(t *testing.T) Front {
@@ -1396,8 +1396,8 @@ func TestRefundRouteBad2(t *testing.T) {
 	}, 123)
 
 	body := models.CodeRequest{
-		Amount:          200,
-		Description:     "Bad coffee",
+		Amount:      200,
+		Description: "Bad coffee",
 	}
 
 	request := events.APIGatewayProxyRequest{
@@ -1545,8 +1545,8 @@ func TestReverseRouteBad2(t *testing.T) {
 	}, 123)
 
 	body := models.CodeRequest{
-		Amount:          200,
-		Description:     "Bad coffee",
+		Amount:      200,
+		Description: "Bad coffee",
 	}
 
 	request := events.APIGatewayProxyRequest{

@@ -55,5 +55,3 @@ func JsonStack(panicMsg interface{}, rawTrace []byte) string {
 
 	return string(jsonData)
 }
-
-

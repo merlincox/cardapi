@@ -1,9 +1,9 @@
 package models
 
 import (
+	"database/sql"
 	"errors"
 	"testing"
-	"database/sql"
 
 	"github.com/merlincox/cardapi/utils"
 )
@@ -226,11 +226,11 @@ func TestNullableMovement_AuthMovement(t *testing.T) {
 
 func TestNullableCard_Card(t *testing.T) {
 	nc := NullableCard{
-		Available:  sql.NullInt64{Int64:1000},
-		Balance:    sql.NullInt64{Int64:2000},
-		CustomerId: sql.NullInt64{Int64:1001},
-		Id:         sql.NullInt64{Int64:100001},
-		Ts:         sql.NullString{String:"fake"},
+		Available:  sql.NullInt64{Int64: 1000},
+		Balance:    sql.NullInt64{Int64: 2000},
+		CustomerId: sql.NullInt64{Int64: 1001},
+		Id:         sql.NullInt64{Int64: 100001},
+		Ts:         sql.NullString{String: "fake"},
 	}
 
 	expected := Card{
