@@ -2,8 +2,8 @@ package db
 
 import (
 	"database/sql"
-	"net/http"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/go-sql-driver/mysql"
@@ -112,6 +112,7 @@ type Dbi interface {
 	Close()
 }
 
+// A private empty struct type to attach interface methods to
 type dbGate struct{}
 
 var (
@@ -121,7 +122,7 @@ var (
 	mutex sync.Mutex
 )
 
-// Returns a new Dbi singleton instance, retrieves the existing instance, or injects and returns one for testing
+// Returns a new Dbi singleton instance, retrieves the existing instance, or returns an injected instance (for testing)
 func NewDbi(mysqlDsn string, injected *sql.DB) (Dbi, models.ApiError) {
 
 	mutex.Lock()
@@ -131,18 +132,18 @@ func NewDbi(mysqlDsn string, injected *sql.DB) (Dbi, models.ApiError) {
 
 		if injected == nil {
 
-			s, err := sql.Open("mysql", mysqlDsn)
+			db, err := sql.Open("mysql", mysqlDsn)
 
-            // Open with a bad DSN does not error, hence ping to check the connection
+			// Open with a bad DSN does not error, hence ping to check the connection
 			if err == nil {
-				err = s.Ping()
+				err = db.Ping()
 			}
 
 			if err != nil {
 				return nil, models.ConstructApiError(http.StatusServiceUnavailable, "Fatal database error: %v", err.Error())
 			}
 
-			dbx = s
+			dbx = db
 
 		} else {
 			dbx = injected
