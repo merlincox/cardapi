@@ -13,16 +13,19 @@ Altogether, the deployment script enables you to create to `https://{your-sub-do
  an example environment for the API (in the supplied example git tag, branch, and commit information and a 
 'platform' variable). Redirection of HTTP to HTTPS and CloudWatch logging are automatically supplied by the gateway.
 
-### Prerequsisites
+### Prerequisites
 
 * A domain with a hosted-zone record in AWS Route 53
 * A SSL certificate for that domain in the AWS Certificate Manager. Note that this certificate has to be in the 
 `us-east-1` AWS region because it is deployed to CloudFront.
+* A publically accessible MySQL database (this doesn't have to be hosted on AWS)
 * The AWS command line interface `aws` installed and suitably set up with credentials for your AWS account
 * `go` installed
 * `glide` (a go dependency manager) installed
 * `git` installed
 * `jq` installed (`jq` is a very useful command-line tool for manipulating JSON. See https://stedolan.github.io/jq.)
+* Optionally, the `generate` tool from https://github.com/a-h/generate to generate GoLang struct definitions from the API JSON schema
+* Optionally, the `mysql` command-line tool installed to generate the table structure in the database
 
 ### Deployment
 
@@ -59,30 +62,71 @@ The API definition YAML includes a Swagger definition for the API.
 
 This can be exported using the `export.sh` script.
 
-In addition a schema-generator executable can be created from here: https://github.com/merlincox/generate
+In addition a schema-generator executable can be created from here: https://github.com/a-h/generate
 
 If this is added to the system path, the `export.sh` will also generate Go structs for the API and optionally replace 
-the pkg/models/api.go file if that is out of sync with the API. (Therefore any additional models which do not feature 
-directly in the API should be placed in the pkg/models/models.go file, as well as any functions attached to API models).
+the models/api.go file if that is out of sync with the API. (Therefore any additional models which do not feature 
+directly in the API should be placed in the models/models.go file, as well as any functions attached to API models).
+
+### MySQL
+
+MySQL connection details are defined in a `mysql.sh` script which is git-ignored. A `mysql.sh.example` file shows what needs to be defined.
+`rebuild_db.sh` can be used to build the tables, sourcing connection details from the same file.
+
+## The API
 
 ### Endpoints
 
-
 | Endpoint  | Method | Body or Parameter | Description |
 | ------------- | ------------- | ------------- | ------------- |
-| /status | GET  | (none) | Returns status data about the API, including the platform deployed to and the Git branch, release and commit deployed from |
-| /customers | GET | (none) | Returns the list of customers|
-| /vendors | GET | (none) | Returns the list of vendors|
-| /card/{id} | GET | id of the card | Returns data about a card identified by id, including movements such as top-ups, payments and refunds|
-| /authorisation/{id | GET | id of the authorisation | Returns data about a payment authorisation identified by id, including movements such as captures, reversals and refunds|
-| /customer/{id} | GET | id of the customer | Returns data about customer by id, including cards held |
-| /vendor/{id} | GET | id of the vendor | Returns data about a vendor identified by id, including authorisations|
-| /customer | POST | customer object, with or without an id| Adds or updates a customer, which is returned |
-| /vendor | POST | vendor object, with or without an id | Adds or updates a vendor, which is returned |
-| /card | POST | customer object with an id | Adds a card to a customer. Returns the card. |
-| /authorise | POST | Code request object with card id, vendor id, amount and description | Request to authorise a payment, returning an authorisation code |
-| /capture | POST | Code request object with authorisation id and amount | Request to capture all or part of an authorised payment, returning a capture code |
-| /reverse | POST | Code request object with authorisation id, amount and description | Request to reverse all or part of an authorised payment, returning a reversal code. Cannot be applied to captured payments. |
-| /refund | POST | Code request object with authorisation id, amount and description | Request to refund all or part of an authorised and captured payment, returning a reversal code. Cannot be applied to uncaptured payments. |
+| `/status` | GET  | (none) | Returns status data about the API, including the platform deployed to and the Git branch, release and commit deployed from |
+| `/customers` | GET | (none) | Returns the list of customers|
+| `/vendors` | GET | (none) | Returns the list of vendors|
+| `/card/{id}` | GET | id of the card | Returns data about a card identified by id, including movements such as top-ups, payments and refunds|
+| `/authorisation/{id}` | GET | id of the authorisation | Returns data about a payment authorisation identified by id, including movements such as captures, reversals and refunds|
+| `/customer/{id}` | GET | id of the customer | Returns data about customer by id, including cards held |
+| `/vendor/{id}` | GET | id of the vendor | Returns data about a vendor identified by id, including authorisations|
+| `/customer` | POST | customer object, with or without an id| Adds or updates a customer, which is returned |
+| `/vendor` | POST | vendor object, with or without an id | Adds or updates a vendor, which is returned |
+| `/card` | POST | customer object with an id | Adds a card to a customer. Returns the card. |
+| `/authorise` | POST | Code request object with card id, vendor id, amount and description | Request to authorise a payment, returning an authorisation code |
+| `/capture` | POST | Code request object with authorisation id and amount | Request to capture all or part of an authorised payment, returning a capture code |
+| `/reverse` | POST | Code request object with authorisation id, amount and description | Request to reverse all or part of an authorised payment, returning a reversal code. Cannot be applied to captured payments. |
+| `/refund` | POST | Code request object with authorisation id, amount and description | Request to refund all or part of an authorised and captured payment, returning a reversal code. Cannot be applied to uncaptured payments. |
+
+### Models
+
+Some of the endpoints require JSON-encoded models in the body of the POST.
+
+For `/authorise`, `/top-up`, `/refund`, `/reverse` the model is a code request with these fields:
+
+| Field  | Type | Required For | Description |
+| ------------- | ------------- | ------------- | ------------- |
+| `amount`    |  integer  |  (all) | Amount of payment etc in £0.01|
+| `authorisationId` | integer | `/capture`, `/refund`, `/reverse` | Value returned from `/authorise` |
+| `cardId`  |        integer  | `/authorise`, `/top-up` | Id of card
+| `description` |    string | `/authorise`, `/top-up`, `/refund`, `/reverse` | Description of transaction |
+| `vendorId` |       integer  | `/authorise` | Id of vendor |
+
+The other (highly simplified) models represent vendors and customers.
+
+Customer:
+
+| Field  | Type | Notes |
+| ------------- | ------------- | -------------
+| `fullname`    |  string  |  |
+| `id` | id | If present and non-zero, the POST `/customer` endpoint will attempt to update rather than create. Required for `/card` |
+
+Vendor:
+
+| Field  | Type | Notes |
+| ------------- | ------------- | -------------
+| `vendorName`    |  string  |  |
+| `id` | id | If present and non-zero, the POST `/vendor` endpoint will attempt to update rather than create. |
+
+
+
+
+
 
 
