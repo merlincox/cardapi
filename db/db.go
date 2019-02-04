@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"net/http"
 	"fmt"
 	"sync"
 
@@ -132,8 +133,13 @@ func NewDbi(mysqlDsn string, injected *sql.DB) (Dbi, models.ApiError) {
 
 			s, err := sql.Open("mysql", mysqlDsn)
 
+            // Open with a bad DSN does not error, hence ping to check the connection
+			if err == nil {
+				err = s.Ping()
+			}
+
 			if err != nil {
-				return nil, models.ErrorWrap(err)
+				return nil, models.ConstructApiError(http.StatusServiceUnavailable, "Fatal database error: %v", err.Error())
 			}
 
 			dbx = s
