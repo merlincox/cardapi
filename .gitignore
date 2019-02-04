@@ -6,3 +6,5 @@ package.yml
 .idea
 vendor
 mysql.sh
+scratch
+

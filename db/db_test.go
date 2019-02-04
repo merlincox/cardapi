@@ -187,8 +187,8 @@ func TestGetCard(t *testing.T) {
 	testWrapper(t, func(t *testing.T, expecter sqlmock.Sqlmock, dbi Dbi) {
 
 		//  c.id, c.balance, c.available, c.ts, m.amount, m.description, m.movement_type, m.ts
-		expected := sqlmock.NewRows([]string{"c.id", "c.balance", "c.available", "c.tc", "m.id", "m.amount", "m.description", "m.movement_type", "m.ts"}).
-			AddRow(int64(1001), 12676, 12089, "2019-01-24 01:00:10", 1001, 95, "Cake", "PURCHASE", "2019-01-24 01:00:10")
+		expected := sqlmock.NewRows([]string{"c.id", "c.balance", "c.available", "c.customer_id", "c.tc", "m.id", "m.amount", "m.description", "m.movement_type", "m.ts"}).
+			AddRow(int64(1001), 12676, 12089, 1001, "2019-01-24 01:00:10", 1001, 95, "Cake", "PURCHASE", "2019-01-24 01:00:10")
 
 		expecter.ExpectPrepare(esc(QUERY_GET_CARD_ALL)).ExpectQuery().WithArgs(1001).WillReturnRows(expected)
 
@@ -345,7 +345,7 @@ func TestAuthoriseOK(t *testing.T) {
 
 		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD))
 		// This duplication seems to be necessary for tx.Stmt(..)
-		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD)).ExpectExec().WithArgs(0, 210, 100001, 210).WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD)).ExpectExec().WithArgs(0, -210, 100001).WillReturnResult(expectedR)
 
 		expectedR = sqlmock.NewResult(1009, 1)
 
@@ -438,7 +438,7 @@ func TestAuthoriseInsufficientFunds2(t *testing.T) {
 
 		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD))
 		// This duplication seems to be necessary for tx.Stmt(..)
-		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD)).ExpectExec().WithArgs(0, 210, 100001, 210).WillReturnResult(expectedR)
+		expecter.ExpectPrepare(esc(QUERY_UPDATE_CARD)).ExpectExec().WithArgs(0, -210, 100001).WillReturnResult(expectedR)
 
 		expecter.ExpectRollback()
 

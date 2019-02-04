@@ -19,7 +19,7 @@ const (
 	QUERY_GET_CARD          = "SELECT id, balance, available, ts FROM cards WHERE id = ?"
 	QUERY_GET_AUTHORISATION = "SELECT id, amount, card_id, vendor_id, description, captured, reversed, refunded FROM authorisations WHERE id = ?"
 
-	QUERY_GET_CARD_ALL = `SELECT c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
+	QUERY_GET_CARD_ALL = `SELECT c.id, c.balance, c.available, c.customer_id, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
                             FROM cards c
                             LEFT OUTER JOIN movements m ON (m.card_id = c.id)
                             WHERE c.id = ?
@@ -576,8 +576,8 @@ func (d *dbGate) GetCard(id int) (models.Card, models.ApiError) {
 
 	for rows.Next() {
 
-		//c.id, c.balance, c.available, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
-		err := rows.Scan(&c.Id, &c.Balance, &c.Available, &c.Ts, &m.Id, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
+		//c.id, c.balance, c.available, c.customer_id, c.ts, m.id, m.amount, m.description, m.movement_type, m.ts
+		err := rows.Scan(&c.Id, &c.Balance, &c.Available, &c.CustomerId, &c.Ts, &m.Id, &m.Amount, &m.Description, &m.MovementType, &m.Ts)
 
 		if err != nil {
 			return c, models.ErrorWrap(err)
@@ -758,9 +758,9 @@ func (d *dbGate) Authorise(cardId, vendorId, amount int, description string) (in
 		return -1, models.ErrorWrap(err)
 	}
 
-	res := handleResults(tx.Stmt(stmts[qry]).Exec(0, amount, cardId, amount))
+	res := handleResults(tx.Stmt(stmts[qry]).Exec(0, -amount, cardId))
 
-	if err != nil {
+	if res.apiErr != nil {
 		return -1, res.apiErr
 	}
 
