@@ -1,5 +1,5 @@
-hash: d0decc856e0f41c0683f0c67cf81c9479ff661b1ee78ca815cccd65961885b34
-updated: 2019-01-22T23:25:58.207164949Z
+hash: adf6c7ca2a9273f0c527c54f938ea8e56e1863343d8973719b3f6515362c898e
+updated: 2019-02-04T14:38:48.211065376Z
 imports:
 - name: github.com/aws/aws-lambda-go
   version: fafa7e49388b8991caf99308e80655ba91816b72
@@ -26,6 +26,10 @@ imports:
   - convey
   - convey/gotest
   - convey/reporting
+- name: golang.org/x/net
+  version: 1e491301e022f8f977054da4c2d852decd59571f
+  subpackages:
+  - context
 - name: golang.org/x/text
   version: f21a4dfb5e38f5895301dc265a8def02365cc3d0
   subpackages:
@@ -39,6 +43,10 @@ imports:
   - language
   - message
   - message/catalog
+- name: google.golang.org/appengine
+  version: 2d2298565d5a399bdfec98dbc259d6393e3cf8ba
+  subpackages:
+  - cloudsql
 - name: gopkg.in/DATA-DOG/go-sqlmock.v1
   version: d76b18b42f285b792bf985118980ce9eacea9d10
 testImports:
@@ -53,7 +61,3 @@ testImports:
   subpackages:
   - internal/go-render/render
   - internal/oglematchers
-- name: golang.org/x/net
-  version: 1e491301e022f8f977054da4c2d852decd59571f
-  subpackages:
-  - context
