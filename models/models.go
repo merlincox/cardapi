@@ -1,3 +1,4 @@
+// Models for cardapi
 package models
 
 import (
@@ -6,12 +7,14 @@ import (
 	"net/http"
 )
 
+// ApiError interface to generate a JSON response body, return error codes, fulfil the error interface
 type ApiError interface {
 	Error() string
 	StatusCode() int
 	ErrorBody() ApiErrorBody
 }
 
+// For use as the body of a response (once jsonified)
 type ApiErrorBody struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
@@ -33,6 +36,8 @@ func (err errBody) ErrorBody() ApiErrorBody {
 	return err.body
 }
 
+
+// ConstructApiError Make an ApiError with a code and a formatted message
 func ConstructApiError(code int, format string, a ...interface{}) ApiError {
 
 	return errBody{
@@ -43,6 +48,7 @@ func ConstructApiError(code int, format string, a ...interface{}) ApiError {
 	}
 }
 
+// ErrorWrap an error into an ApiError
 func ErrorWrap(err error) ApiError {
 
 	apiErr, ok := err.(ApiError)
@@ -69,7 +75,7 @@ func (auth Authorisation) Refundable() int {
 	return auth.Captured - auth.Refunded
 }
 
-// Placeholder type which can receive null values in database scans
+// Placeholder type which can receive null values in database scans in the place of Movement or AuthMovement
 type NullableMovement struct {
 	Id           sql.NullInt64
 	ParentId     sql.NullInt64
@@ -79,10 +85,12 @@ type NullableMovement struct {
 	Ts           sql.NullString
 }
 
+// Returns true if non null. Note that the id must be set in the query scan
 func (nm NullableMovement) Valid() bool {
 	return nm.Id.Valid
 }
 
+// Generates a 'ordinary' Movement from the NullableMovement
 func (nm NullableMovement) Movement() Movement {
 	return Movement{
 		Id:           int(nm.Id.Int64),
@@ -94,6 +102,7 @@ func (nm NullableMovement) Movement() Movement {
 	}
 }
 
+// Generates an 'ordinary' AuthMovement from the NullableMovement
 func (nm NullableMovement) AuthMovement() AuthMovement {
 	return AuthMovement{
 		Id:              int(nm.Id.Int64),
@@ -105,7 +114,7 @@ func (nm NullableMovement) AuthMovement() AuthMovement {
 	}
 }
 
-// Placeholder type which can receive null values in database scans
+// Placeholder type which can receive null values in database scans in the place of Authorisation
 type NullableAuthorisation struct {
 	Amount      sql.NullInt64
 	Captured    sql.NullInt64
@@ -118,10 +127,12 @@ type NullableAuthorisation struct {
 	VendorId    sql.NullInt64
 }
 
+// Returns true if non null. Note that the id must be set in the query scan
 func (na NullableAuthorisation) Valid() bool {
 	return na.Id.Valid
 }
 
+// Generate san 'ordinary' Authorisation from the NullableAuthorisation
 func (na NullableAuthorisation) Authorisation() Authorisation {
 	return Authorisation{
 		Amount:      int(na.Amount.Int64),
@@ -136,7 +147,7 @@ func (na NullableAuthorisation) Authorisation() Authorisation {
 	}
 }
 
-// Placeholder type which can receive null values in database scans
+// Placeholder type which can receive null values in database scans in the place of card
 type NullableCard struct {
 	Available  sql.NullInt64
 	Balance    sql.NullInt64
@@ -145,10 +156,12 @@ type NullableCard struct {
 	Ts         sql.NullString
 }
 
+// Returns true if non null. Note that the id must be set in the query scan
 func (nc NullableCard) Valid() bool {
 	return nc.Id.Valid
 }
 
+// Generates an 'ordinary' Card from the NullableCard
 func (nc NullableCard) Card() Card {
 	return Card{
 		Available:  int(nc.Available.Int64),

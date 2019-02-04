@@ -1,3 +1,4 @@
+// Database operations to support cardapi
 package db
 
 import (
