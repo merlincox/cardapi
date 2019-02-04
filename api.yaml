@@ -1308,8 +1308,6 @@ Resources:
                 type: "integer"
               ts:
                 type: "string"
-              customer:
-                $ref: "#/definitions/Customer"
               movements:
                 type: "array"
                 items:
