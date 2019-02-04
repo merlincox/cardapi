@@ -73,7 +73,9 @@ directly in the API should be placed in the models/models.go file, as well as an
 MySQL connection details are defined in a `mysql.sh` script which is git-ignored. A `mysql.sh.example` file shows what needs to be defined.
 `rebuild_db.sh` can be used to build the tables, sourcing connection details from the same file.
 
-## The API
+## The Card API
+
+Note that for simplicity codes such as authorisation codes are merely autoincremental ids.
 
 ### Endpoints
 
@@ -98,7 +100,7 @@ MySQL connection details are defined in a `mysql.sh` script which is git-ignored
 
 Some of the endpoints require JSON-encoded models in the body of the POST.
 
-For `/authorise`, `/top-up`, `/refund`, `/reverse` the model is a code request with these fields:
+For `/authorise`, `/top-up`, `/capture`, `/refund`, `/reverse` the model to use is a "code request" with these fields:
 
 | Field  | Type | Required For | Description |
 | ------------- | ------------- | ------------- | ------------- |
@@ -108,16 +110,16 @@ For `/authorise`, `/top-up`, `/refund`, `/reverse` the model is a code request w
 | `description` |    string | `/authorise`, `/top-up`, `/refund`, `/reverse` | Description of transaction |
 | `vendorId` |       integer  | `/authorise` | Id of vendor |
 
-The other (highly simplified) models represent vendors and customers.
+The other models represent (highly simplified) vendors and customers.
 
-Customer:
+For `/customer` and `/card` the customer model:
 
 | Field  | Type | Notes |
 | ------------- | ------------- | -------------
 | `fullname`    |  string  |  |
-| `id` | id | If present and non-zero, the POST `/customer` endpoint will attempt to update rather than create. Required for `/card` |
+| `id` | id | If present and non-zero, the POST `/customer` endpoint will attempt to update rather than create. Required for the POST `/card` endpoint. |
 
-Vendor:
+For `/vendor`, the vendor model:
 
 | Field  | Type | Notes |
 | ------------- | ------------- | -------------
