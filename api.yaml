@@ -1271,7 +1271,7 @@ Resources:
                 type: "array"
                 items:
                   $ref: "#/definitions/Card"
-            description: "Customer"
+            description: "Customer: a very simple representation of a customer"
           Vendor:
             type: "object"
             required:
@@ -1288,7 +1288,7 @@ Resources:
                 type: "array"
                 items:
                   $ref: "#/definitions/Authorisation"
-            description: "Vendor"
+            description: "Vendor: a very simple representation of a vendor"
           Card:
             type: "object"
             required:
@@ -1308,11 +1308,13 @@ Resources:
                 type: "integer"
               ts:
                 type: "string"
+              customer:
+                $ref: "#/definitions/Customer"
               movements:
                 type: "array"
                 items:
                   $ref: "#/definitions/Movement"
-            description: "Card"
+            description: "Card with balance and availability"
           Movement:
             type: "object"
             required:
@@ -1371,7 +1373,7 @@ Resources:
                 type: "array"
                 items:
                   $ref: "#/definitions/AuthMovement"
-            description: "Authorisation"
+            description: "Authorisation: an authorised payment which may be partially or fully captured, refunded or reversed"
           AuthMovement:
             type: "object"
             required:
@@ -1410,7 +1412,7 @@ Resources:
                 type: "integer"
               description:
                 type: "string"
-            description: "Request for a code"
+            description: "Request for a code such as an authorisation code"
           CodeResponse:
             type: "object"
             required:
@@ -1418,7 +1420,7 @@ Resources:
             properties:
               id:
                 type: "integer"
-            description: "Response to a request for a code"
+            description: "Response to a request for a code with an id"
           CustomerList:
             type: "object"
             required:
