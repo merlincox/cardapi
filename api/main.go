@@ -59,11 +59,3 @@ func main() {
 
 	lambda.Start(handler)
 }
-
-type down struct {
-	response events.APIGatewayProxyResponse
-}
-
-func (d down) handler(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
-	return d.response, nil
-}
