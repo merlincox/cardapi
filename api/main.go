@@ -32,17 +32,16 @@ func main() {
 
 		log.Printf("Fatal database error: %v", apiErr.Error())
 
-		handler = func(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
+		body := models.ConstructApiError(http.StatusServiceUnavailable, "Fatal database error: %v", apiErr.Error())
 
-			body := models.ConstructApiError(http.StatusServiceUnavailable, "Fatal database error: %v", apiErr.Error())
-
-			response = events.APIGatewayProxyResponse{
+		d := down{
+			response: events.APIGatewayProxyResponse{
 				StatusCode: http.StatusServiceUnavailable,
 				Body:       utils.JsonStringify(body),
-			}
-
-			return
+			},
 		}
+
+		handler = d.handler
 
 	} else {
 
@@ -58,4 +57,12 @@ func main() {
 	}
 
 	lambda.Start(handler)
+}
+
+type down struct {
+	response events.APIGatewayProxyResponse
+}
+
+func (d down) handler(request events.APIGatewayProxyRequest) (response events.APIGatewayProxyResponse, err error) {
+	return d.response, nil
 }
