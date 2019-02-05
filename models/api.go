@@ -12,7 +12,7 @@ type AuthMovement struct {
 	Ts              string `json:"ts"`
 }
 
-// Authorisation: Authorisation
+// Authorisation: Authorisation: an authorised payment which may be partially or fully captured, refunded or reversed
 type Authorisation struct {
 	Amount      int            `json:"amount"`
 	Captured    int            `json:"captured"`
@@ -35,7 +35,7 @@ type CalculationResult struct {
 	Val2   float64 `json:"val2"`
 }
 
-// Card: Card
+// Card: Card with balance and availability
 type Card struct {
 	Available  int        `json:"available"`
 	Balance    int        `json:"balance"`
@@ -45,7 +45,7 @@ type Card struct {
 	Ts         string     `json:"ts"`
 }
 
-// CodeRequest: Request for a code
+// CodeRequest: Request for a code such as an authorisation code
 type CodeRequest struct {
 	Amount          int    `json:"amount"`
 	AuthorisationId int    `json:"authorisationId,omitempty"`
@@ -54,12 +54,12 @@ type CodeRequest struct {
 	VendorId        int    `json:"vendorId,omitempty"`
 }
 
-// CodeResponse: Response to a request for a code
+// CodeResponse: Response to a request for a code with an id
 type CodeResponse struct {
 	Id int `json:"id"`
 }
 
-// Customer: Customer
+// Customer: Customer: a very simple representation of a customer
 type Customer struct {
 	Cards    []Card `json:"cards,omitempty"`
 	Fullname string `json:"fullname"`
@@ -96,7 +96,7 @@ type Status struct {
 	Timestamp string `json:"timestamp"`
 }
 
-// Vendor: Vendor
+// Vendor: Vendor: a very simple representation of a vendor
 type Vendor struct {
 	Authorisations []Authorisation `json:"authorisations,omitempty"`
 	Balance        int             `json:"balance,omitempty"`
